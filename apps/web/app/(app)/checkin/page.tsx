@@ -30,22 +30,89 @@ export default function CheckInPage() {
   const [analysis, setAnalysis] = useState<AiAnalysis | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [recordingTime, setRecordingTime] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     api.getPatients().then(setPatients).catch(() => toast.error("Failed to load patients"));
   }, []);
 
-  const handleRecord = () => {
+  const handleRecord = async () => {
     if (isRecording) {
+      // Stop recording
+      mediaRecorderRef.current?.stop();
+      recognitionRef.current?.stop();
       setIsRecording(false);
-      if (!transcript) {
-        setTranscript(
-          "Hi, this is my check-in. I've been feeling okay but I've had some headaches this week. I'm still taking my medication every day. The headaches started about three days ago and they're moderate. I also feel a bit tired in the afternoons."
-        );
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
+      setRecordingTime(0);
     } else {
-      setIsRecording(true);
+      // Start recording
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        chunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+          const file = new File([blob], `checkin-${Date.now()}.webm`, {
+            type: "audio/webm",
+          });
+          setAudioFile(file);
+          toast.success("Recording captured");
+          stream.getTracks().forEach((t) => t.stop());
+        };
+
+        mediaRecorder.start();
+
+        // Start speech-to-text (Web Speech API — Chrome built-in)
+        const SpeechRecognition =
+          (window as any).SpeechRecognition ||
+          (window as any).webkitSpeechRecognition;
+        if (SpeechRecognition) {
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = "en-US";
+
+          let finalTranscript = "";
+          recognition.onresult = (event: any) => {
+            let interim = "";
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              const result = event.results[i];
+              if (result.isFinal) {
+                finalTranscript += result[0].transcript + " ";
+              } else {
+                interim += result[0].transcript;
+              }
+            }
+            setTranscript(finalTranscript + interim);
+          };
+
+          recognition.onerror = () => {
+            // Speech recognition failed silently — user can still type
+          };
+
+          recognition.start();
+          recognitionRef.current = recognition;
+        }
+
+        setIsRecording(true);
+        setRecordingTime(0);
+        timerRef.current = setInterval(() => {
+          setRecordingTime((t) => t + 1);
+        }, 1000);
+      } catch {
+        toast.error("Microphone access denied — type or paste transcript instead");
+      }
     }
   };
 
@@ -262,11 +329,13 @@ export default function CheckInPage() {
               <div className="flex-1">
                 <p className="text-sm font-medium text-slate-700">
                   {isRecording
-                    ? "Recording... Click to stop"
+                    ? `Recording... ${recordingTime}s — Click to stop`
                     : "Click to start recording"}
                 </p>
                 <p className="text-xs text-clinical-muted mt-0.5">
-                  Or upload an audio file / type transcript below
+                  {isRecording
+                    ? "Speak clearly into your microphone"
+                    : "Or upload an audio file / type transcript below"}
                 </p>
               </div>
 

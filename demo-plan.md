@@ -1,150 +1,186 @@
 # VoxVitals Demo Plan
 
-## 1. Story
+## The Story
 
 **"Patients speak. AI detects risk. Trials stay safe."**
 
-Clinical trials lose patients silently. By the time a coordinator notices a problem, the patient has already dropped out. VoxVitals gives patients a voice -- literally -- and uses AI to catch warning signs before they become losses.
+30% of clinical trial patients drop out. Between scheduled visits, they suffer side effects, lose motivation, skip medication — and no one knows until it's too late. VoxVitals lets patients do a 30-second voice check-in. AI extracts symptoms, measures dropout risk, and flags adverse events. Coordinators see alerts before patients disappear.
 
 ---
 
-## 2. Problem, Solution, Impact
+## Problem → Solution → Impact (Medpace Context)
 
-### Problem
-Clinical trials have a 30% average dropout rate. Patients experience side effects, lose motivation, or struggle with medication adherence -- but these signals go unnoticed between scheduled visits. Every dropout costs sponsors $20,000-$50,000 and delays the trial timeline.
+**Problem:** Clinical trials lose 30% of patients. Each dropout costs $20K-$50K and pushes back the entire trial. Patients experience side effects and frustration between visits. Coordinators discover problems too late — at the next scheduled visit, or worse, when the patient stops showing up. This is a daily reality at CROs like Medpace.
 
-### Solution
-VoxVitals is an AI-powered voice monitoring system for clinical trials. Patients do short voice check-ins (30-60 seconds). The AI analyzes what they say and flags:
-- Symptoms and side effects (severity, onset, frequency)
-- Dropout risk (low / moderate / high based on language patterns)
-- Adverse events (safety-critical flags that require immediate action)
-- Medication adherence concerns
+**Solution:** VoxVitals — AI-powered voice monitoring for clinical trials. Patients describe how they feel in natural speech. Gemini 2.0 Flash analyzes the transcript and extracts:
+- Symptoms with severity (headache: 7/10)
+- Dropout risk score (0-100%)
+- Adverse event flags (safety-critical)
+- Medication adherence signals
 
-### Impact
-- Coordinators see a live dashboard of patient risk instead of waiting for the next visit
-- Critical alerts surface immediately -- not days later
-- Trials retain more patients and catch safety issues faster
-- Every check-in creates structured, analyzable data from unstructured speech
+Alerts auto-generate for the coordinator. No manual review needed.
 
----
-
-## 3. Demo Flow (exact step-by-step)
-
-### Setup (before judges arrive)
-1. App is running at localhost or deployed URL
-2. Logged in with test credentials
-3. Dashboard is visible with seed data (5+ patients, some existing check-ins, 1-2 existing alerts)
-4. Browser dev tools closed
-
-### Live Demo Sequence
-
-**Step 1: Dashboard Overview (15 seconds)**
-- Show the dashboard with patient cards, stat summary, and alerts panel
-- Point out: "Here's our coordinator dashboard. We can see 8 patients across the trial. Two already have alerts flagged by the AI."
-- Click on one alert briefly to show it has context
-
-**Step 2: Navigate to Voice Check-in (5 seconds)**
-- Click "Voice Check-in" in the sidebar
-- Page loads with patient selector and recording interface
-
-**Step 3: Select Patient + Provide Transcript (20 seconds)**
-- Select a patient from the dropdown (e.g., "Maria Garcia -- Hypertension Study")
-- Either:
-  - (A) Click the record button, wait 2-3 seconds, click stop (simulated recording fills transcript) -- fast and visual
-  - (B) Paste a pre-written concerning transcript into the textarea -- more control over what AI sees
-- Recommended transcript to paste for maximum demo impact:
-  > "I've been having really bad headaches for the past four days. They started after I increased the dosage like the doctor said. I almost didn't take my pills yesterday because the headaches were so bad. I'm not sure I want to continue with this if it keeps up."
-
-**Step 4: Submit and Watch AI Analyze (15 seconds)**
-- Click "Submit & Analyze"
-- Loading spinner appears ("Analyzing...")
-- AI analysis results appear:
-  - Summary: describes the patient's concerns
-  - Symptoms: headaches (severe, 4 days)
-  - Dropout Risk: HIGH (bar fills red)
-  - Adverse Event: FLAGGED
-  - Medication Adherence Risk: HIGH
-  - Recommended Action: specific clinical guidance
-- Point out: "In seconds, the AI extracted structured clinical data from natural speech."
-
-**Step 5: Show Alert Was Auto-Created (15 seconds)**
-- Navigate back to Dashboard
-- Point out the NEW alert that just appeared in the alerts panel
-- The alert shows the patient name, severity (critical), and the reason (adverse event / high dropout risk)
-- Point out: "The coordinator didn't have to do anything. The system detected the risk and surfaced it automatically."
-
-**Step 6: Patient Detail View (10 seconds)**
-- Click on the patient card to see their detail page
-- Show: check-in history with the new check-in, analysis results, alert history
-- Point out: "Full history. Every check-in analyzed. Trends visible over time."
-
-### Total demo time: ~80 seconds
+**Impact for Medpace:**
+- Catch patients about to drop out *before* they disappear
+- Detect adverse events hours/days faster than current manual processes
+- Reduce coordinator workload — AI does the initial screening
+- Every voice check-in becomes structured, queryable clinical data
+- Directly improves trial retention, safety reporting speed, and data quality
 
 ---
 
-## 4. WOW Moments
+## 60-90 Second Demo Script
 
-### WOW 1: Instant AI Insight from Natural Speech
-The moment the analysis results appear after clicking "Submit & Analyze." Unstructured patient speech transforms into structured clinical data in seconds: symptoms with severity, dropout risk score, adverse event flag, recommended action. This is the core value proposition made visible.
+*Practice this until it feels natural. Not word-for-word — know the beats.*
 
-**What makes it land:** The contrast between messy human speech and clean, structured clinical output. Judges see the transcript on the left and the structured analysis on the right.
+### Beat 1: The Problem (10 seconds)
+> "Clinical trials lose 30% of their patients. Between visits, patients struggle with side effects and no one knows. By the time a coordinator finds out, the patient has already dropped out. VoxVitals changes that."
 
-### WOW 2: Critical Alert Auto-Generation
-After submitting a high-risk check-in, navigating to the dashboard and seeing a new red critical alert that was NOT there before. No human created it. The AI detected the risk and the system generated the alert automatically.
+### Beat 2: The Dashboard (15 seconds)
+*[Dashboard is already showing with patients and alerts]*
+> "This is the coordinator's dashboard. Five patients in an active trial. Two are already flagged by the AI. These alerts were auto-generated from their voice check-ins — the coordinator didn't create them manually."
 
-**What makes it land:** The alert just appears. The coordinator's workflow is interrupted by something important -- exactly how it should work. The red color and severity badge make it impossible to miss.
+*[Point to a critical red alert]*
+> "This one is critical — adverse event detected."
 
-### WOW 3: Dashboard Risk-at-a-Glance
-The dashboard showing multiple patients with different risk levels, stat cards with real numbers, and an alerts panel with actionable items. A coordinator can look at this for 5 seconds and know which patients need attention.
+### Beat 3: Live Check-in (20 seconds)
+*[Click "Voice Check-in" in sidebar → Select a patient → Paste transcript]*
+> "Now let's see a new patient check-in come in. The patient describes how they've been feeling..."
 
-**What makes it land:** It looks like a real clinical tool, not a hackathon prototype. The design system (clean whites, clinical blues, red for critical, green for stable) communicates professionalism and trustworthiness.
+*[Paste the demo transcript, click "Submit & Analyze"]*
+> "One click. The AI analyzes the transcript in real-time."
 
-### Bonus WOW (if implemented): Animated Analysis Reveal
-Analysis results appearing section by section with subtle animations -- summary first, then symptoms populate, then the dropout risk bar fills from left to right, then the adverse event flag appears with a red pulse. Feels like the AI is actively thinking and reporting.
+*[Button shows "Saving check-in..." then "Running AI analysis..."]*
+
+### Beat 4: The AI Moment (20 seconds — THIS IS THE WOW)
+*[Results appear: summary, symptoms, risk bar, adverse event flag]*
+> "Instantly — the AI extracted structured clinical data from natural speech."
+
+*[Point to each section]*
+> "Symptoms identified with severity. Dropout risk at 78% — that's high. Adverse event flagged. And a specific recommended action for the coordinator."
+
+*[Pause 2 seconds. Let judges read the screen.]*
+> "Unstructured voice became actionable clinical intelligence in seconds."
+
+### Beat 5: The Alert (15 seconds)
+*[Navigate back to Dashboard]*
+> "Now look at the dashboard."
+
+*[Point to the new red critical alert that just appeared]*
+> "A critical alert just appeared. The system created it automatically because the AI detected an adverse event and high dropout risk. The coordinator didn't do anything — the system brought the problem to them."
+
+### Beat 6: The Close (10 seconds)
+> "VoxVitals turns patient voice into clinical insight. It catches patients who would otherwise disappear. Built with Next.js, Supabase, and Gemini 2.0 Flash."
+
+**Total: ~90 seconds**
 
 ---
 
-## 5. 60-Second Understanding
+## Demo Transcript (copy this to clipboard before demo)
 
-What judges must grasp in the first minute:
+> I've been having really bad headaches for the past four days. They started after I increased the dosage like the doctor said. I almost didn't take my pills yesterday because the headaches were so bad. I'm not sure I want to continue with this if it keeps up.
 
-1. **What it is:** An AI system that monitors clinical trial patients through voice check-ins
-2. **How it works:** Patient speaks -> AI extracts symptoms, risk, and adverse events -> alerts surface automatically
-3. **Why it matters:** Clinical trials lose 30% of patients. VoxVitals catches the warning signs early
-4. **What is real:** The AI analysis is real (Gemini 2.0 Flash or realistic mock). The structured output is real. The alert generation is real. The dashboard is real.
-5. **What is the technical achievement:** Voice-to-structured-clinical-data pipeline, automated risk scoring, real-time alert system -- built with Next.js, Supabase, and Gemini
-
-If a judge walks away remembering one thing: "That app that turns patient voice recordings into risk alerts for clinical trials."
+This transcript triggers:
+- Headache symptom (severity ~6-7)
+- High medication adherence risk (almost didn't take pills)
+- High dropout risk ("not sure I want to continue")
+- Potential adverse event (headaches after dosage increase)
 
 ---
 
-## 6. Demo Safety
+## Exact Click-by-Click Flow
 
-### Avoid These During Demo
-- **Do NOT open browser dev tools** -- console may show warnings or mock provider logs
-- **Do NOT try to demo real audio recording** unless it has been fully tested and works reliably. Use simulated recording or paste a transcript
-- **Do NOT navigate to pages that are not part of the demo flow** -- stick to Dashboard -> Check-in -> Dashboard -> Patient Detail
-- **Do NOT attempt to show Supabase dashboard or database tables** -- stay in the app
-- **Do NOT demo with a slow network** -- if Gemini API is slow, switch to mock provider (remove `GEMINI_API_KEY` from env)
-- **Do NOT try to explain the architecture** unless asked. Show the product, not the code
-- **Do NOT demo the signup flow** -- be pre-logged-in. Auth is not the interesting part
-- **Do NOT click "Acknowledge" on the seed data alerts** -- you want alerts visible on dashboard for the demo
+### Setup (15 min before)
+1. App running (localhost:3000 or deployed URL)
+2. Already logged in — dashboard visible
+3. Seed data loaded (5 patients, alerts visible)
+4. Browser: 100% zoom, no other tabs, no dev tools
+5. Demo transcript copied to clipboard
 
-### Fallback Plans
+### Live Sequence
+
+| # | Action | What Judge Sees | Judging Criterion Hit |
+|---|--------|-----------------|----------------------|
+| 1 | Show dashboard (already visible) | Patient cards, stat cards, red critical alerts | Technology & Experience, Presentation |
+| 2 | Point to existing alerts | Red-bordered critical alert with severity badge | Industry Value (auto-detection) |
+| 3 | Click "Voice Check-in" in sidebar | Clean check-in interface loads | Technology & Experience (UX) |
+| 4 | Select patient from dropdown | Patient list from Supabase | Technology (real database) |
+| 5 | Paste transcript (Ctrl+V) | Patient's words appear in textarea | Patient Value (real patient voice) |
+| 6 | Click "Submit & Analyze" | "Saving check-in..." → "Running AI analysis..." | Technology (real pipeline) |
+| 7 | Results appear | Summary, symptoms, risk bar, adverse event, recommended action | Patient Value + Originality |
+| 8 | Click Dashboard in sidebar | NEW critical alert visible, patient now "flagged" | Industry Value (automated alerting) |
+| 9 | Click patient card | Full history: check-in, analysis, alerts | Technology & Experience |
+
+---
+
+## WOW Moments — What Makes Judges Stop and Pay Attention
+
+### WOW 1: AI Transforms Voice into Clinical Data (Beat 4)
+**What they see:** Unstructured patient speech → structured clinical data in seconds. Symptoms with severity bars. Red dropout risk bar. Adverse event flag. Specific recommended action.
+**What they feel:** "This actually works. The AI understood a real patient."
+**Why it wins:** Proves Patient Value (understands patient needs) + Originality (novel approach) + Technology (functional prototype)
+
+### WOW 2: Alert Auto-Generates on Dashboard (Beat 5)
+**What they see:** A new red critical alert that was NOT there 30 seconds ago. No human created it.
+**What they feel:** "The system acts autonomously. This is how clinical monitoring should work."
+**Why it wins:** Proves Industry Value (improves clinical trial process) + Technology (end-to-end pipeline works)
+
+### WOW 3: Dashboard Communicates Risk at a Glance (Beat 2)
+**What they see:** Clean, professional clinical dashboard. Patient risk levels obvious. Alerts panel with severity coloring. Stat cards with real numbers.
+**What they feel:** "This doesn't look like a hackathon prototype. This looks like a real product."
+**Why it wins:** Proves Technology & Experience (well thought out UX) + Presentation (clear communication)
+
+---
+
+## What Judges Should Feel
+
+| Moment | Feeling | Criterion |
+|--------|---------|-----------|
+| Hear the problem statement | "This is a real problem. 30% dropout is huge." | Patient Value |
+| See the dashboard | "This is polished. Serious team." | Technology & Experience |
+| See the patient transcript | "This sounds like someone who's struggling." | Patient Value |
+| See AI analysis appear | "It actually understood the patient. Impressive." | Originality |
+| See dropout risk bar fill red | "That's alarming. This patient is about to leave." | Industry Value |
+| See adverse event flag | "That's a safety issue. Urgent." | Patient Value |
+| See auto-generated alert | "The system caught it without human input. Powerful." | Industry Value |
+| Hear closing statement | "This could save trials money and patients' lives." | Presentation |
+
+---
+
+## Key Phrases (use naturally, don't force)
+
+- "Real-time risk detection from patient voice"
+- "Catches patients before they disappear"
+- "The coordinator doesn't search for problems — the system brings problems to them"
+- "From unstructured voice to actionable clinical intelligence"
+- "Adverse events detected in seconds, not days"
+- "Every check-in becomes structured clinical data — automatically"
+- "Built for the reality of how patients actually communicate"
+
+---
+
+## Failure Fallback Plan
+
 | Problem | Fallback |
 |---------|----------|
-| Gemini API is slow or down | Remove `GEMINI_API_KEY`, mock provider responds instantly with realistic data |
-| Supabase is unreachable | Have screenshots ready. Or run with local mock data if time allows |
-| Audio upload fails | Skip audio upload entirely. Transcript is the important input |
-| Login fails | Have a second browser tab already logged in |
-| Dashboard shows no data | Run seed SQL again. Or manually create a patient + check-in via the app |
-| Alert does not auto-generate | Manually show the analysis results on the check-in page and verbally note "this triggers an alert for the coordinator" |
+| AI takes >5 seconds | Use mock provider (remove `GEMINI_API_KEY`). Responds instantly with realistic clinical data. |
+| Pipeline fails (no alert created) | Point to seed data alerts: "Here's an auto-generated alert from an earlier check-in. The system caught chest tightness and medication discontinuation." |
+| Dashboard empty | Run `seed.sql` again. Or say "Let me show the check-in flow" and focus on the AI analysis result. |
+| Login fails | Have second browser tab already logged in. |
+| Vercel down | Demo on localhost. Always have `npm run dev` ready. |
+| Presenter freezes | Know the 4 beats: Problem → Dashboard → AI → Alert. Even without words, clicking through tells the story. |
 
-### Pre-Demo Checklist
-- [ ] App running and accessible
-- [ ] Logged in with test credentials
-- [ ] Dashboard has seed data visible (patients, stats, at least 1 alert)
-- [ ] Concerning transcript ready to paste (saved in clipboard or a notepad)
-- [ ] Browser zoom at 100%, no dev tools, no other tabs visible
-- [ ] Gemini API tested (or confirmed mock provider is active)
-- [ ] Demo completed successfully in practice run at least once
+---
+
+## Pre-Demo Checklist (15 minutes before)
+
+- [ ] App running and accessible (localhost or Vercel)
+- [ ] Logged in — dashboard visible with data
+- [ ] At least 2 alerts visible on dashboard (seed data)
+- [ ] Demo transcript in clipboard
+- [ ] Know which patient to select (one with "active" status)
+- [ ] Browser: 100% zoom, no other tabs, no dev tools
+- [ ] Mock provider confirmed working (or Gemini tested and fast)
+- [ ] Demo practiced at least 3 times
+- [ ] Verbal narrative smooth — under 90 seconds
+- [ ] Backup plan understood: show seed data if pipeline fails

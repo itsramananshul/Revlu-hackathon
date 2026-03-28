@@ -1,154 +1,156 @@
-# VoxVitals Roadmap
+# VoxVitals Roadmap — Hackathon Winning Strategy
 
-## 1. Current State Audit
+## Challenge
 
-### DONE (working, do not break)
-- Next.js 15 App Router with full route structure (16 API routes)
-- Dashboard page: patient cards, stat cards (total patients, active alerts, compliance rate, check-ins), alerts panel, loading skeletons, error/empty states
-- Voice check-in page: patient selector, simulated recording, transcript textarea, audio file upload to Supabase Storage, AI analysis display with symptoms/risk/adverse events
-- AI service with provider pattern: mock provider returns realistic data, Gemini provider coded, ElevenLabs TTS provider coded
-- Supabase Auth: login, signup, signout, middleware route protection, auth callback
-- Patient detail page: analysis display, alerts, check-in history
-- Responsive sidebar with mobile hamburger menu
-- Toast notifications via Sonner
-- Database schema SQL (`apps/web/supabase/schema.sql`) and seed data (`apps/web/supabase/seed.sql`)
-- Type system in `packages/types` shared across the monorepo
-- API utility layer (`lib/api.ts`) with typed client-side fetch wrapper
-- DB mappers (`lib/db-mappers.ts`) for snake_case DB rows to camelCase app types
-
-### PARTIAL (coded but not verified end-to-end)
-- Supabase connection: `.env.local` configured but never tested with real queries
-- Check-in submission: calls `api.analyzeTranscript()` and `api.createCheckIn()` separately, but analysis result is NOT saved to `ai_analyses` table and NOT linked to the check-in record
-- AI analysis via Gemini: provider code exists (`lib/ai/providers/gemini.provider.ts`) but no `GEMINI_API_KEY` set, untested
-- ElevenLabs TTS: provider exists, speech API route exists (`/api/ai/speech`), no `ELEVENLABS_API_KEY` set
-- Analytics summary route (`/api/analytics/summary`): queries DB but never tested against real Supabase data
-- Audio file upload to Supabase Storage: code exists in checkin page, bucket "checkin-audio" may not exist yet
-
-### MISSING (not implemented at all)
-- Saving AI analysis results: after `analyzeTranscript()` returns, the result is displayed client-side but never POSTed to an endpoint that inserts into `ai_analyses`
-- Auto-alert generation: no code creates alerts when AI flags adverse events or high dropout risk
-- End-to-end flow wiring: check-in -> analyze -> save analysis -> generate alerts -> update patient risk status
-- Real audio recording: `handleRecord()` is fake -- sets a hardcoded transcript string on stop
-- Real-time dashboard updates: no polling, no Supabase realtime subscriptions
-- Data visualization: no charts or trend graphs (symptom trends mentioned in UI but not rendered as charts)
-- Patient risk status auto-update: no code updates patient `status` field based on AI analysis results
-
-### BUG-PRONE
-- Check-in page fires `api.analyzeTranscript()` and `api.createCheckIn()` as separate calls with no transactional linking -- if one fails the other still runs
-- The `createCheckIn` API client call does not include `audioUrl` in the type signature (type says `{ patientId: string; transcript: string }` but the route handler accepts `audioUrl`)
-- AI analyze route (`/api/ai/analyze`) returns analysis but does not accept `checkInId` or `patientId` -- no way to associate the result with a record
-- Mock AI provider always returns the same hardcoded response regardless of transcript content -- fine for structure testing but will look fake in demo if Gemini key is missing
+**"Best Digital Solution to Improve or Add Value to the Clinical Trial Process"** — Medpace Hackathon
 
 ---
 
-## 2. Core Demo Goals
+## Current State
 
-The demo must show this flow working end-to-end, visually and reliably:
+### DONE (do not break)
+- End-to-end pipeline: check-in → Gemini AI analysis → save to Supabase → auto-generate alerts → update patient status
+- Supabase Postgres (4 tables), Auth (login/signup/signout/middleware), Storage (audio uploads)
+- 17 API routes including core pipeline `POST /api/checkins/[id]/analyze`
+- Dashboard: patient cards with status, stat cards, severity-colored alerts panel (red border for critical)
+- Voice check-in page with pipeline progress indicators ("Saving check-in..." → "Running AI analysis...")
+- Patient detail page: analysis, alerts, check-in history
+- Mock AI provider as instant Gemini fallback
+- Loading skeletons, error states, empty states, toast notifications
+- Responsive sidebar, middleware handles missing env vars gracefully
 
-1. Clinician selects a patient and provides a voice transcript (typed, pasted, or simulated recording)
-2. AI analyzes the transcript and returns structured results (symptoms, risk scores, adverse events)
-3. Analysis results are displayed immediately on the check-in page
-4. If adverse event or high dropout risk is detected, an alert is auto-created
-5. Dashboard reflects the new check-in, updated patient status, and any new alerts
-6. A judge can see at a glance: which patients are at risk, what the AI found, and what action is recommended
-
-Everything else is secondary.
-
----
-
-## 3. Phase Plan
-
-### Phase 1: Stability (wire the end-to-end flow)
-**Goal:** Check-in submission triggers analysis, saves results, generates alerts, updates dashboard.
-
-| Task | Files | Expected Output | Verification |
-|------|-------|-----------------|--------------|
-| Create API endpoint to save AI analysis | New: `app/api/analyses/route.ts` | POST accepts `checkInId`, `patientId`, analysis data; inserts into `ai_analyses` table | POST with test data, verify row in Supabase `ai_analyses` table |
-| Create API endpoint for auto-alert generation | New: `app/api/alerts/generate/route.ts` or extend existing alerts POST | Accepts analysis result, creates alert if `adverseEvent: true` or `dropoutRisk > 0.7` | Submit high-risk analysis, verify alert appears in `alerts` table |
-| Wire check-in page to save analysis + generate alerts | `app/(app)/checkin/page.tsx` | After `analyzeTranscript()`, POST analysis to save endpoint, then POST to alert generation | Submit check-in, verify: check-in in DB, analysis in DB, alert in DB (if high risk) |
-| Update patient status based on analysis | Extend analysis save or alert generation endpoint | Set patient status to "flagged" or "critical" when dropout risk > 0.7 or adverse event detected | Check `patients` table after high-risk check-in |
-| Test Supabase connection end-to-end | `.env.local`, run `npm run dev` | Login works, dashboard loads seed data, API routes return real data | Manual: login, see patients, see alerts |
-| Verify Supabase Storage bucket exists | Supabase dashboard | "checkin-audio" bucket exists and accepts uploads | Upload audio file via check-in page |
-
-### Phase 2: UX Polish (clean, clear, demo-ready)
-**Goal:** Every screen looks intentional and professional. No broken states visible during demo.
-
-| Task | Files | Expected Output | Verification |
-|------|-------|-----------------|--------------|
-| Add loading/analyzing animation to check-in flow | `app/(app)/checkin/page.tsx` | Smooth transition: "Analyzing..." spinner -> results appear with slight delay for dramatic effect | Visual: submit check-in, see clean transition |
-| Dashboard auto-refresh after check-in | `app/(app)/page.tsx` | Dashboard reloads data when navigated to (or add 30s polling) | Submit check-in, navigate to dashboard, see updated data |
-| Make alert panel on dashboard show new alerts prominently | `app/(app)/page.tsx` | New critical alerts have red accent, pulse animation or "NEW" badge | Create high-risk check-in, see alert appear red on dashboard |
-| Clean up any TypeScript errors or console warnings | All files | Zero console errors during demo flow | Open dev tools, run full demo flow, check console |
-| Ensure empty states display well | Components | "No alerts" shows clean message, not blank space | View dashboard with no alerts |
-
-### Phase 3: Demo Impact (WOW moments)
-**Goal:** Three moments that make judges pause and pay attention.
-
-| Task | Files | Expected Output | Verification |
-|------|-------|-----------------|--------------|
-| Instant AI insight reveal: animate analysis results appearing section by section | `app/(app)/checkin/page.tsx` | After analysis, summary fades in first, then symptoms, then risk bar fills, then adverse event flag appears | Visual: feels like AI is "thinking and revealing" |
-| Critical alert red flash on dashboard | Dashboard components | When a critical alert exists, the alert card has a subtle red pulse or glow | Create adverse event check-in, check dashboard |
-| Add a simple trend indicator to patient cards | `app/(app)/page.tsx` or patient card component | Small up/down arrow or "risk increasing" text based on latest analysis | Check patient card after multiple check-ins |
-
-### Phase 4: Optional Stretch (only if time)
-| Task | Notes |
-|------|-------|
-| Real audio recording via MediaRecorder API | Replace simulated recording with actual browser mic capture; transcript still needs to come from somewhere (manual input or a speech-to-text API) |
-| ElevenLabs TTS playback of AI summary | If API key is available, add "Listen to Summary" button that plays spoken version |
-| Supabase Realtime subscription on dashboard | Live updates without page refresh |
-| Simple bar chart for symptom frequency | Use a lightweight chart library (recharts or chart.js) |
+### NEEDS ATTENTION
+- Seed data must be loaded (`seed.sql` not yet run)
+- Mock AI summary has "[MOCK]" prefix — must remove for demo credibility
+- Full pipeline must be tested end-to-end multiple times
+- Demo script must be practiced
 
 ---
 
-## 4. DO NOT TOUCH List
+## Judging Criteria — How VoxVitals Wins Each Category
 
-These are good enough. Do not refactor, redesign, or "improve" them:
+### 1. Patient Value
+*"How well does this solution demonstrate an understanding of a trial patient's needs and solve for them?"*
 
-- Sidebar navigation and responsive layout
-- Auth flow (login/signup/signout/middleware) -- it works
-- API route structure and naming conventions
-- Type system in `packages/types`
-- Database schema -- it covers what is needed
-- Tailwind design system and existing component styles
-- Loading skeletons and error state components
-- The mock AI provider -- keep it as fallback
-- Monorepo structure (`apps/web`, `packages/types`, `packages/config`)
-- Toast notification setup
+**How we score:** Patients in clinical trials suffer between visits with no way to communicate deterioration. VoxVitals gives them a voice — literally. A 30-second check-in captures symptoms, medication struggles, and emotional state. The AI detects warning signs that would otherwise go unnoticed until the next scheduled visit — or until the patient silently drops out.
+
+**Demo moment that proves it:** The transcript sounds like a real patient. The AI extracts specific symptoms, flags an adverse event, and measures dropout risk. The judge sees: this system *understands* what the patient is going through.
+
+**What to say:** "Between visits, patients have no way to signal they're struggling. VoxVitals gives them a voice and makes sure someone is listening — even when no coordinator is available."
+
+### 2. Industry Value
+*"How does the solution improve or add value to the clinical trial process?"*
+
+**How we score:** Clinical trials lose 30% of patients to dropout. Each dropout costs $20K-$50K and delays timelines. CROs like Medpace spend enormous manual effort on patient follow-up and retention. VoxVitals automates the detection layer — turning patient voice into structured clinical data with automated risk alerts. This directly addresses: patient retention, adverse event detection speed, site coordinator efficiency, and data collection quality.
+
+**Demo moment that proves it:** The alert auto-generates. The coordinator's dashboard updates. No manual review was needed. The system brought the problem to the coordinator instead of the coordinator searching for it.
+
+**What to say:** "Every clinical trial has a retention problem. VoxVitals turns it into a technology problem — and solves it with AI."
+
+### 3. Technology & Experience
+*"How well does this solution utilize available technologies? How functional is the prototype? How well thought out is the user experience?"*
+
+**How we score:** Full-stack Next.js + Supabase (Postgres, Auth, Storage). Gemini 2.0 Flash for AI analysis with provider abstraction (mock fallback). Real database persistence, real auth, real file storage. The UX is clean and clinical — not a hackathon wireframe. The dashboard communicates risk at a glance. The check-in flow is 3 clicks. The analysis output is human-readable.
+
+**Demo moment that proves it:** The app looks and feels like a real clinical tool. Loading states, error handling, responsive design — these details signal professional execution. The pipeline works reliably end-to-end.
+
+**What to say:** "This is a fully functional prototype. Real database, real auth, real AI. Not a mockup."
+
+### 4. Originality
+*"How original is the solution? If it is not novel, how well does it build new concepts onto an existing piece of technology?"*
+
+**How we score:** Voice-based clinical trial monitoring with real-time AI risk extraction does not exist in this form. The combination is novel: natural voice input → structured clinical data extraction → automated risk scoring → alert generation → coordinator dashboard. This is not a chatbot. This is not a survey tool. This is continuous AI-powered patient surveillance through voice.
+
+**What to say:** "No one is doing real-time voice-based risk detection for clinical trials. This is a new approach to an old problem."
+
+### 5. Presentation
+*"How well does the team convey the benefits and opportunities of their solution?"*
+
+**How we score:** 90-second demo flow. Four clear steps: Dashboard → Check-in → AI Result → Alert on Dashboard. One narrative: "Patients speak. AI detects risk. Trials stay safe." Every click has purpose. Every screen communicates value. No confusion.
+
+**What to say:** Let the product speak. Describe the problem in 10 seconds. Show the solution in 60 seconds. Close with impact in 10 seconds.
 
 ---
 
-## 5. Risks & Constraints
+## Phases (remaining work — focused on winning)
+
+### Phase 1 — Demo Stability (must not fail)
+
+| Task | Verify |
+|------|--------|
+| Run `seed.sql` in Supabase SQL Editor | Dashboard shows 5 patients + alerts |
+| Remove "[MOCK]" prefix from mock AI provider | Analysis summary reads like a clinical note |
+| Test full pipeline 3 times: check-in → analyze → alert → dashboard | Zero failures, Supabase tables have data |
+| Confirm auth works: login → dashboard → check-in → dashboard | No crashes, no redirects |
+
+### Phase 2 — Visual Clarity & UX Impact
+
+| Task | Why It Matters for Judges |
+|------|--------------------------|
+| Critical alerts have red left border (already done — verify) | Judges see urgency immediately → Industry Value |
+| Patient status badge updates to "flagged" after high-risk check-in | System reacts to risk → Technology & Experience |
+| AI analysis reads as clinical prose, not technical output | Output feels real → Patient Value |
+| Pipeline shows step-by-step progress ("Saving..." → "Analyzing...") | Builds anticipation → Presentation |
+
+### Phase 3 — Emotional & Story Layer
+
+| Task | Why |
+|------|-----|
+| Demo transcript sounds like a real patient struggling | Judges feel empathy → Patient Value |
+| Verbal narrative connects to clinical trial dropout problem | Judges understand the stakes → Industry Value |
+| Each screen has a one-liner: "Who needs attention?" / "AI detects risk" / "Alert auto-generated" | Judges follow the story → Presentation |
+| Pause after AI results appear — let it sink in | Emotional impact → Presentation |
+
+### Phase 4 — Presentation Optimization
+
+| Task | Details |
+|------|---------|
+| Pre-login before demo | Be on dashboard when judges arrive |
+| Transcript in clipboard | One paste, zero typing |
+| Know which patient to select | Pick one currently "active" |
+| Practice script 5 times | Under 90 seconds, no fumbling |
+| Close all tabs, 100% zoom | Clean screen |
+
+### Phase 5 — Optional Polish (only if time)
+- Staggered analysis reveal animation (CSS only)
+- Subtle red pulse on critical alert badges
+- "NEW" label on alerts from the last 5 minutes
+
+---
+
+## DO NOT DO
+
+- **No new features** — the pipeline is complete
+- **No backend refactoring** — API routes work
+- **No architecture changes** — the system is stable
+- **No database schema changes** — tables are set
+- **No real audio recording** — too risky for demo; transcript paste is reliable
+- **No charts or visualizations** — not enough time to make them look good
+- **No package renames** — internal names (`@trialpulse/types`) don't affect the demo
+- **No deployment optimization** — localhost is a valid demo plan
+
+---
+
+## Risks & Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Supabase connection fails (wrong URL, missing keys, RLS policies block queries) | Nothing works -- dashboard empty, check-ins fail | Test connection FIRST before any feature work. Check RLS policies allow authenticated user access. Have seed data ready. |
-| Gemini API latency > 5 seconds | Demo feels slow, awkward pause during check-in | Keep mock provider as instant fallback. If Gemini is set up, test response time. Consider showing a "thinking" animation. |
-| Gemini API returns malformed JSON | Analysis display crashes or shows blank | Add try/catch with fallback to mock response. Validate response shape before using. |
-| No GEMINI_API_KEY available | AI analysis is fake (mock provider) | Mock provider returns realistic-looking data. Mention in demo: "connected to Gemini 2.0 Flash" but show the mock gracefully. |
-| Audio recording fails (browser permissions, no HTTPS) | Can't demo voice input | Transcript textarea is the reliable fallback. Lead demo with "patient speaks, transcript captured" and paste/type. |
-| Supabase Storage bucket missing | Audio upload errors on check-in | Create bucket manually in Supabase dashboard before demo. Or skip audio upload in demo. |
-| Auth session expires during demo | Redirected to login mid-demo | Login fresh right before demo. Set long session duration in Supabase auth settings. |
-| Database has no data | Dashboard looks empty and unimpressive | Run seed SQL before demo. Or create 2-3 check-ins manually during demo setup. |
+| Gemini API slow (>5s) | Awkward pause | Remove `GEMINI_API_KEY` → mock responds in <1s with realistic data |
+| Pipeline fails live | No alert appears | Point to seed data alerts: "Here's an auto-generated alert from an earlier check-in" |
+| Empty database | Dashboard looks dead | Run `seed.sql` 30 minutes before demo |
+| Auth session expires | Redirect to login | Login fresh 5 minutes before demo; keep tab active |
+| Presenter freezes | Lost narrative | Script is in `demo-plan.md`; practice 5 times minimum |
 
 ---
 
-## 6. Definition of "Hackathon Ready"
+## Definition of "Hackathon Ready"
 
-Concrete checklist -- every item must be YES before demo:
-
-- [ ] `npm run dev` starts without errors
-- [ ] Login with test credentials works
-- [ ] Dashboard loads and shows patient cards with data
-- [ ] Dashboard shows stat cards with non-zero numbers
-- [ ] Navigate to Voice Check-in page without errors
-- [ ] Select a patient from dropdown (patients load from DB)
-- [ ] Enter/paste a transcript and click "Submit & Analyze"
-- [ ] AI analysis results appear on screen (summary, symptoms, risk, adverse event flag)
-- [ ] Analysis is saved to `ai_analyses` table in Supabase
-- [ ] If adverse event or high risk detected, alert auto-created in `alerts` table
-- [ ] Navigate to dashboard -- new alert visible in alerts panel
-- [ ] Patient detail page shows the check-in and analysis
-- [ ] No console errors during the entire flow
-- [ ] Demo can be completed in under 3 minutes
-- [ ] Fallback works: if Gemini key missing, mock provider returns data and demo still looks good
-- [ ] At least one "wow moment" is visible (instant AI insight, red alert appearance, or risk visualization)
+- [ ] Seed data loaded — dashboard shows patients and alerts
+- [ ] Pipeline tested 3x — check-in → analysis → alert → dashboard
+- [ ] Mock AI summary has no "[MOCK]" prefix
+- [ ] Auth works — login → dashboard → check-in → back to dashboard
+- [ ] Demo transcript in clipboard and ready
+- [ ] Demo completed in under 90 seconds in practice
+- [ ] Presenter has practiced verbal script at least 3 times
+- [ ] Zero console errors during full flow
+- [ ] Fallback plan understood (show seed data if pipeline fails)

@@ -9,6 +9,7 @@ import type {
   CheckIn,
 } from "@trialpulse/types";
 import { api } from "@/lib/api";
+import { useMode } from "@/lib/mode-context";
 import { PatientStatusBadge, SeverityBadge } from "@/components/StatusBadge";
 import { DropoutRiskBar } from "@/components/DropoutRiskBar";
 import { EmptyState } from "@/components/EmptyState";
@@ -30,6 +31,7 @@ import {
 } from "lucide-react";
 
 export default function DashboardPage() {
+  const { refreshKey } = useMode();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [checkins, setCheckins] = useState<CheckIn[]>([]);
@@ -58,9 +60,10 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // Re-fetch when switching back from patient mode
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, refreshKey]);
 
   const handleAcknowledge = async (alertId: string) => {
     try {
@@ -152,6 +155,9 @@ export default function DashboardPage() {
           <div className="space-y-2">
             {alerts.map((alert) => {
               const patient = patients.find((p) => p.id === alert.patientId);
+              const isRecent =
+                Date.now() - new Date(alert.createdAt).getTime() <
+                10 * 60 * 1000;
               return (
                 <div
                   key={alert.id}
@@ -169,6 +175,11 @@ export default function DashboardPage() {
                         {patient?.name || alert.patientId}
                       </span>
                       <SeverityBadge severity={alert.severity} />
+                      {isRecent && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-500 text-white animate-pulse">
+                          New
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-slate-600 line-clamp-1">
                       {alert.message}
