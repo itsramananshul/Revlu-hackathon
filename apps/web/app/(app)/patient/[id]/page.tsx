@@ -102,7 +102,7 @@ export default function PatientDetailPage() {
     return (
       <div className="text-center py-12">
         <p className="text-clinical-muted">Patient not found</p>
-        <Link href="/" className="text-primary-600 hover:underline mt-2 block">
+        <Link href="/dashboard" className="text-primary-600 hover:underline mt-2 block">
           Back to dashboard
         </Link>
       </div>
@@ -117,7 +117,7 @@ export default function PatientDetailPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Back link */}
       <Link
-        href="/"
+        href="/dashboard"
         className="inline-flex items-center gap-1.5 text-sm text-clinical-muted hover:text-slate-700 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />

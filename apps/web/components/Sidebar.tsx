@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/checkin", label: "Voice Check-in", icon: Mic },
 ];
 
@@ -42,16 +42,16 @@ export function Sidebar() {
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="p-5 border-b border-clinical-border">
+      <div className="p-5 border-b border-clinical-border dark:border-slate-800">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center shadow-sm">
             <Activity className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+            <h1 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
               VoxVitals
             </h1>
-            <p className="text-[11px] text-clinical-muted font-medium uppercase tracking-wider">
+            <p className="text-[11px] text-clinical-muted dark:text-slate-500 font-medium uppercase tracking-wider">
               Voice Monitoring
             </p>
           </div>
@@ -74,7 +74,7 @@ export function Sidebar() {
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                 isActive
                   ? "bg-primary-600 text-white shadow-sm"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Icon className="w-[18px] h-[18px]" />
@@ -91,12 +91,12 @@ export function Sidebar() {
             <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
               <User className="w-3.5 h-3.5 text-primary-600" />
             </div>
-            <span className="text-xs text-slate-600 truncate">{userEmail}</span>
+            <span className="text-xs text-slate-600 dark:text-slate-400 truncate">{userEmail}</span>
           </div>
         )}
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
         >
           <LogOut className="w-4 h-4" />
           Sign Out
@@ -125,7 +125,7 @@ export function Sidebar() {
 
       {/* Mobile sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-full w-64 bg-white border-r border-clinical-border flex flex-col z-50 md:hidden transform transition-transform duration-200 ${
+        className={`fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-900 border-r border-clinical-border dark:border-slate-800 flex flex-col z-50 md:hidden transform transition-transform duration-200 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
