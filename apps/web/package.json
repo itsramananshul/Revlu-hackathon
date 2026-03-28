@@ -9,12 +9,15 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@trialpulse/types": "*",
+    "@supabase/ssr": "^0.9.0",
+    "@supabase/supabase-js": "^2.100.1",
     "@trialpulse/config": "*",
+    "@trialpulse/types": "*",
+    "lucide-react": "^0.469.0",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "lucide-react": "^0.469.0"
+    "sonner": "^2.0.7"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",

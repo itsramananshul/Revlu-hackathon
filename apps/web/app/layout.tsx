@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { Toaster } from "sonner";
 import "./globals.css";
-import { Sidebar } from "@/components/Sidebar";
 
 export const metadata: Metadata = {
   title: "TrialPulse — Clinical Trial Monitoring",
@@ -14,9 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="flex min-h-screen">
-        <Sidebar />
-        <main className="flex-1 ml-64 p-8">{children}</main>
+      <body className="min-h-screen antialiased">
+        {children}
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

@@ -2,91 +2,80 @@
 
 ## Overview
 
-TrialPulse is a modular monolith monorepo for AI-powered clinical trial monitoring.
+TrialPulse is a Next.js full-stack application backed by Supabase for database, auth, and storage. It uses a modular API route structure with AI provider abstraction for Gemini and ElevenLabs.
+
+## Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 15 (App Router), React 19, Tailwind CSS |
+| API | Next.js API Routes |
+| Database | Supabase Postgres |
+| Auth | Supabase Auth |
+| Storage | Supabase Storage |
+| AI | Google Gemini 2.0 Flash + ElevenLabs TTS |
+| Deploy | Vercel + Supabase |
 
 ## Monorepo Structure
 
 ```
 trialpulse/
-├── apps/
-│   ├── web/         → Next.js frontend (App Router, Tailwind CSS)
-│   └── api/         → Express backend (modular monolith)
+├── apps/web/                 # Single Next.js application
+│   ├── app/
+│   │   ├── api/              # API route handlers
+│   │   ├── (auth)/           # Public auth pages (login, signup)
+│   │   ├── (app)/            # Protected pages (dashboard, checkin, patient)
+│   │   └── auth/callback/    # OAuth/email callback handler
+│   ├── lib/
+│   │   ├── supabase/         # Supabase clients (server, browser, middleware)
+│   │   ├── ai/               # AI provider abstraction
+│   │   ├── api.ts            # Frontend API client
+│   │   ├── api-utils.ts      # Response helpers
+│   │   └── db-mappers.ts     # DB row → TypeScript type mappers
+│   ├── components/           # Reusable UI components
+│   ├── middleware.ts          # Auth session refresh + route protection
+│   └── supabase/             # SQL schema + seed files
 ├── packages/
-│   ├── types/       → Shared TypeScript types
-│   └── config/      → Shared constants and configuration
-└── docs/            → Documentation
+│   ├── types/                # Shared TypeScript types
+│   └── config/               # Shared constants
+└── docs/
 ```
 
-## Backend Architecture
+## Database Schema
 
-The backend follows a **modular monolith** pattern with layered modules:
+4 tables: `patients`, `check_ins`, `ai_analyses`, `alerts`
 
-```
-apps/api/src/
-├── modules/
-│   ├── patients/    → Patient management
-│   ├── checkins/    → Voice check-in submission and storage
-│   ├── ai/          → AI provider abstraction (Gemini + ElevenLabs)
-│   ├── alerts/      → Clinical alert management
-│   └── analytics/   → Risk trends and metrics
-├── shared/
-│   ├── errors/      → Custom error classes
-│   ├── middleware/   → Express middleware
-│   └── utils/       → Response envelope helpers
-├── data/
-│   └── seed.ts      → Demo seed data
-├── app.ts           → Express app configuration
-└── server.ts        → Entry point
-```
+- `ai_analyses` has JSONB `symptoms` column
+- RLS enabled: all authenticated users can read/write all tables
+- `checkin-audio` storage bucket for audio uploads
 
-### Module Layer Convention
+## Auth Flow
 
-Each module follows:
-- `*.types.ts`      → Module-specific types and DTOs
-- `*.repository.ts` → Data access (in-memory, swappable for real DB)
-- `*.service.ts`    → Business logic
-- `*.controller.ts` → Express request handlers
-- `*.routes.ts`     → Express router
+1. `middleware.ts` runs on every request via `@supabase/ssr`
+2. Refreshes auth session cookie
+3. Redirects unauthenticated users to `/login`
+4. Redirects authenticated users away from auth pages
+5. API routes verify auth via `supabase.auth.getUser()`
 
-### Provider Abstraction
+## AI Provider Abstraction
 
-AI providers use interface-based abstraction:
+- `AiProvider` interface → `GeminiProvider` | `MockAiProvider`
+- `TtsProvider` interface → `ElevenLabsProvider` | `MockTtsProvider`
+- `AiService` singleton auto-selects based on environment variables
+- Mock providers use keyword heuristics with simulated delays
 
-- `AiProvider` interface → `GeminiProvider` / `MockAiProvider`
-- `TtsProvider` interface → `ElevenLabsProvider` / `MockTtsProvider`
+## API Response Contract
 
-The service layer auto-selects mock providers when API keys are missing.
-
-## Frontend Architecture
-
-```
-apps/web/
-├── app/
-│   ├── page.tsx               → Dashboard
-│   ├── checkin/page.tsx       → Voice check-in flow
-│   └── patient/[id]/page.tsx  → Patient detail + analysis
-├── components/                → Reusable UI components
-└── lib/
-    └── api.ts                 → API client
-```
-
-## API Response Envelope
-
-All API responses follow:
-
+All API responses use envelope:
 ```json
-{
-  "success": boolean,
-  "message": string,
-  "data": ...
-}
+{ "success": boolean, "message": string, "data": T | null }
 ```
 
 ## Data Flow
 
-1. Patient submits voice check-in (audio/transcript)
-2. Backend receives transcript via `/api/checkins`
+1. Patient submits voice check-in (audio upload + transcript)
+2. Audio stored in Supabase Storage, transcript saved to `check_ins`
 3. AI module analyzes transcript via Gemini (or mock)
-4. Analysis generates alerts based on risk thresholds
-5. Dashboard displays patient status, alerts, and trends
+4. Analysis saved to `ai_analyses`, alerts generated in `alerts`
+5. Dashboard queries Supabase for patients, alerts, analytics
 6. Optional: ElevenLabs generates spoken summary
