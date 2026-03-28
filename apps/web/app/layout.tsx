@@ -3,7 +3,7 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "TrialPulse — Clinical Trial Monitoring",
+  title: "VoxVitals — AI Voice Monitoring for Clinical Trials",
   description: "AI-powered clinical trial monitoring dashboard",
 };
 

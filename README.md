@@ -1,6 +1,6 @@
-# TrialPulse
+# VoxVitals
 
-AI-powered clinical trial monitoring platform. Patients submit voice check-ins, AI (Gemini) analyzes transcripts into structured clinical insights, and researchers view alerts, patient status, and risk trends in a real-time dashboard.
+AI-powered voice-based patient monitoring for clinical trials. Patients submit voice check-ins, AI (Gemini) analyzes transcripts into structured clinical insights, and researchers view alerts, patient status, and risk trends in a real-time dashboard.
 
 ## Tech Stack
 
@@ -24,7 +24,7 @@ AI-powered clinical trial monitoring platform. Patients submit voice check-ins, 
 ### 2. Environment Variables
 
 ```bash
-cp .env.example .env.local
+cp .env.example apps/web/.env.local
 ```
 
 Fill in:

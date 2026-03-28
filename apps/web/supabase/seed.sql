@@ -1,5 +1,5 @@
 -- ============================================================
--- TrialPulse Seed Data
+-- VoxVitals Seed Data
 -- Run this AFTER schema.sql to populate demo data
 -- ============================================================
 

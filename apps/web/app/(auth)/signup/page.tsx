@@ -70,7 +70,7 @@ export default function SignUpPage() {
         Create an account
       </h2>
       <p className="text-sm text-clinical-muted mb-6">
-        Get started with TrialPulse monitoring
+        Get started with VoxVitals monitoring
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">

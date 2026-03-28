@@ -1,8 +1,8 @@
-# TrialPulse Architecture
+# VoxVitals Architecture
 
 ## Overview
 
-TrialPulse is a Next.js full-stack application backed by Supabase for database, auth, and storage. It uses a modular API route structure with AI provider abstraction for Gemini and ElevenLabs.
+VoxVitals is a Next.js full-stack application backed by Supabase for database, auth, and storage. It uses a modular API route structure with AI provider abstraction for Gemini and ElevenLabs.
 
 ## Stack
 
@@ -19,7 +19,7 @@ TrialPulse is a Next.js full-stack application backed by Supabase for database, 
 ## Monorepo Structure
 
 ```
-trialpulse/
+voxvitals/
 ├── apps/web/                 # Single Next.js application
 │   ├── app/
 │   │   ├── api/              # API route handlers

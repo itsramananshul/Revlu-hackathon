@@ -1,8 +1,8 @@
 // ============================================================
-// TrialPulse Shared Configuration
+// VoxVitals Shared Configuration
 // ============================================================
 
-export const APP_NAME = "TrialPulse";
+export const APP_NAME = "VoxVitals";
 
 export const RISK_THRESHOLDS = {
   dropoutRisk: {

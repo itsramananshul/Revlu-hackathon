@@ -49,10 +49,10 @@ export function Sidebar() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-              TrialPulse
+              VoxVitals
             </h1>
             <p className="text-[11px] text-clinical-muted font-medium uppercase tracking-wider">
-              Clinical Monitoring
+              Voice Monitoring
             </p>
           </div>
         </div>

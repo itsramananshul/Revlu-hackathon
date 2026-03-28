@@ -1,6 +1,6 @@
-# TrialPulse API Contracts
+# VoxVitals API Contracts
 
-Base URL: `http://localhost:4000/api`
+Base URL: `http://localhost:3000/api`
 
 All responses follow the envelope:
 ```json
@@ -13,7 +13,7 @@ All responses follow the envelope:
 
 ### `GET /api/health`
 ```json
-{ "status": "ok", "service": "trialpulse-api" }
+{ "status": "ok", "service": "voxvitals-api" }
 ```
 
 ---

@@ -13,9 +13,9 @@ export default function AuthLayout({
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-600 mb-4">
             <Activity className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">TrialPulse</h1>
+          <h1 className="text-2xl font-bold text-slate-900">VoxVitals</h1>
           <p className="text-sm text-clinical-muted mt-1">
-            AI-Powered Clinical Trial Monitoring
+            AI Voice Monitoring for Clinical Trials
           </p>
         </div>
 
