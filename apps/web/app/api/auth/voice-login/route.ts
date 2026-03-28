@@ -6,12 +6,11 @@ import { phraseMatches } from "@/lib/voice-verification";
 /**
  * POST /api/auth/voice-login
  *
- * Voice-based login:
- * 1. Receive audio + patientId
- * 2. Fetch patient's voice_phrase from DB
+ * 1. Receive email + audio
+ * 2. Look up user_profiles by email → get stored voice_phrase
  * 3. Transcribe audio via ElevenLabs STT
- * 4. Compare transcript with expected phrase
- * 5. If match → sign in as a demo user and return session
+ * 4. Compare transcript with stored phrase
+ * 5. If match → sign in with Supabase Auth and return session
  */
 export async function POST(request: Request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -22,53 +21,64 @@ export async function POST(request: Request) {
 
   if (!url || !serviceKey) {
     return NextResponse.json(
-      { success: false, message: "Server config error", data: null },
+      { success: false, message: "Server configuration error", data: null },
       { status: 500 }
     );
   }
 
   const formData = await request.formData();
   const audioFile = formData.get("audio") as File | null;
-  const patientId = formData.get("patientId") as string | null;
+  const email = (formData.get("email") as string | null)?.trim().toLowerCase();
 
-  if (!patientId || !audioFile || audioFile.size === 0) {
+  if (!email) {
     return NextResponse.json(
-      {
-        success: false,
-        message: "Patient selection and voice recording are required",
-        data: { verified: false, reason: "no_audio" },
-      },
+      { success: false, message: "Email is required", data: null },
       { status: 400 }
     );
   }
 
-  // Use service role to bypass RLS (no session yet)
+  if (!audioFile || audioFile.size === 0) {
+    return NextResponse.json(
+      { success: false, message: "Voice recording is required", data: null },
+      { status: 400 }
+    );
+  }
+
+  // Service role client to bypass RLS
   const supabase = createClient(url, serviceKey);
 
-  // Fetch patient's voice phrase
-  const { data: patient, error: patientError } = await supabase
-    .from("patients")
-    .select("voice_phrase, name")
-    .eq("id", patientId)
-    .single();
+  // Look up voice phrase by email
+  const { data: profile, error: profileError } = await supabase
+    .from("user_profiles")
+    .select("voice_phrase, id")
+    .eq("email", email)
+    .maybeSingle();
 
-  if (patientError || !patient) {
+  if (profileError) {
+    return NextResponse.json(
+      { success: false, message: "Database error", data: null },
+      { status: 500 }
+    );
+  }
+
+  if (!profile) {
     return NextResponse.json(
       {
         success: false,
-        message: "Patient not found",
-        data: { verified: false, reason: "missing_phrase" },
+        message: "No account found with this email. Please sign up first.",
+        data: null,
       },
       { status: 404 }
     );
   }
 
-  if (!patient.voice_phrase) {
+  if (!profile.voice_phrase) {
     return NextResponse.json(
       {
         success: false,
-        message: "No voice phrase configured for this patient",
-        data: { verified: false, reason: "missing_phrase" },
+        message:
+          "No voice phrase set for this account. Please sign in with email and set your phrase.",
+        data: null,
       },
       { status: 400 }
     );
@@ -79,8 +89,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: false,
-        message: "Voice service unavailable",
-        data: { verified: false, reason: "transcription_failed" },
+        message: "Voice service unavailable. Please use email login.",
+        data: null,
       },
       { status: 503 }
     );
@@ -90,105 +100,80 @@ export async function POST(request: Request) {
   try {
     const stt = new ElevenLabsSttProvider(elevenLabsKey);
     const audioBuffer = Buffer.from(await audioFile.arrayBuffer());
-    transcript = await stt.transcribe(audioBuffer, audioFile.name);
+    transcript = await stt.transcribe(audioBuffer, audioFile.name || "audio.webm");
   } catch (err) {
-    console.error("[VoiceLogin] STT failed:", err);
+    console.error("[VoiceLogin] STT error:", err);
     return NextResponse.json(
       {
         success: false,
-        message: "Could not process voice recording. Please try again.",
-        data: { verified: false, reason: "transcription_failed" },
+        message: "Could not process voice recording. Please try again or use email login.",
+        data: null,
       },
       { status: 500 }
     );
   }
 
   // Compare phrases
-  const { matches } = phraseMatches(transcript, patient.voice_phrase);
+  const { matches } = phraseMatches(transcript, profile.voice_phrase);
 
   if (!matches) {
     return NextResponse.json(
       {
         success: false,
         message: "Voice phrase did not match. Please try again.",
-        data: {
-          verified: false,
-          reason: "phrase_mismatch",
-          transcript,
-        },
+        data: { transcript },
       },
       { status: 401 }
     );
   }
 
-  // Voice matched — create a magic link sign-in for the demo user
-  // Use a deterministic demo email based on patient name
-  const demoEmail = `${patient.name.toLowerCase().replace(/\s+/g, ".")}@voxvitals.demo`;
-  const demoPassword = `voice-${patientId.slice(0, 8)}`;
-
-  // Try to sign in first (user may already exist)
-  const { data: signInData, error: signInError } =
-    await supabase.auth.signInWithPassword({
-      email: demoEmail,
-      password: demoPassword,
-    });
-
-  if (signInData?.session) {
-    return NextResponse.json({
-      success: true,
-      message: `Welcome back, ${patient.name}`,
-      data: {
-        verified: true,
-        reason: "matched",
-        transcript,
-        session: signInData.session,
-        patientName: patient.name,
-      },
-    });
-  }
-
-  // User doesn't exist yet — create them
-  const { data: signUpData, error: signUpError } = await supabase.auth.admin
-    ? await supabase.auth.admin.createUser({
-        email: demoEmail,
-        password: demoPassword,
-        email_confirm: true,
-      })
-    : await supabase.auth.signUp({
-        email: demoEmail,
-        password: demoPassword,
+  // Phrase matched — look up the user's auth credentials and generate a sign-in link
+  // Use admin API to generate a magic link or sign the user in directly
+  try {
+    // Generate a one-time sign-in link for this user
+    const { data: linkData, error: linkError } =
+      await supabase.auth.admin.generateLink({
+        type: "magiclink",
+        email: email,
       });
 
-  if (signUpError) {
-    // Fallback: if signup fails, still report voice was verified
+    if (linkError || !linkData) {
+      // Fallback: report verified but can't auto-sign-in without service role
+      return NextResponse.json({
+        success: true,
+        message: "Voice verified! Use the token to complete sign in.",
+        data: {
+          verified: true,
+          transcript,
+          token: null,
+        },
+      });
+    }
+
+    // Extract the token from the generated link
+    const token = linkData.properties?.hashed_token;
+    const redirectUrl = linkData.properties?.action_link;
+
     return NextResponse.json({
       success: true,
-      message: `Voice verified for ${patient.name}. Please sign in with your credentials.`,
+      message: "Voice verified",
       data: {
         verified: true,
-        reason: "matched",
         transcript,
-        session: null,
-        patientName: patient.name,
+        token,
+        redirectUrl,
+      },
+    });
+  } catch {
+    // If admin API not available, still report success
+    return NextResponse.json({
+      success: true,
+      message: "Voice verified",
+      data: {
+        verified: true,
+        transcript,
+        token: null,
       },
     });
   }
-
-  // Sign in the newly created user
-  const { data: newSignIn } = await supabase.auth.signInWithPassword({
-    email: demoEmail,
-    password: demoPassword,
-  });
-
-  return NextResponse.json({
-    success: true,
-    message: `Welcome, ${patient.name}`,
-    data: {
-      verified: true,
-      reason: "matched",
-      transcript,
-      session: newSignIn?.session || null,
-      patientName: patient.name,
-    },
-  });
 }

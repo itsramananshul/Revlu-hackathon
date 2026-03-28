@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -30,8 +30,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   // Voice login state
-  const [patients, setPatients] = useState<{ id: string; name: string }[]>([]);
-  const [selectedPatient, setSelectedPatient] = useState("");
+  const [voiceEmail, setVoiceEmail] = useState("");
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
   const [recordingTime, setRecordingTime] = useState(0);
   const [voiceError, setVoiceError] = useState("");
@@ -39,18 +38,6 @@ export default function LoginPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Load patients for voice login dropdown
-  useEffect(() => {
-    if (mode === "voice") {
-      fetch("/api/auth/patients")
-        .then((r) => r.json())
-        .then((json) => {
-          if (json.success) setPatients(json.data);
-        })
-        .catch(() => {});
-    }
-  }, [mode]);
 
   // Email login
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -76,8 +63,8 @@ export default function LoginPage() {
 
   // Voice recording
   const startRecording = async () => {
-    if (!selectedPatient) {
-      toast.error("Please select your name first");
+    if (!voiceEmail.trim()) {
+      toast.error("Please enter your email first");
       return;
     }
     try {
@@ -124,7 +111,7 @@ export default function LoginPage() {
     try {
       const formData = new FormData();
       formData.append("audio", audioFile);
-      formData.append("patientId", selectedPatient);
+      formData.append("email", voiceEmail.trim());
 
       const res = await fetch("/api/auth/voice-login", {
         method: "POST",
@@ -136,24 +123,35 @@ export default function LoginPage() {
       if (json.success && json.data?.verified) {
         setVoiceState("success");
 
-        // If server returned a session, set it
-        if (json.data.session) {
+        // Try to use the redirect URL (magic link) to complete sign in
+        if (json.data.redirectUrl) {
           const supabase = createClient();
-          await supabase.auth.setSession({
-            access_token: json.data.session.access_token,
-            refresh_token: json.data.session.refresh_token,
-          });
+          // Extract token from the action link and verify OTP
+          const url = new URL(json.data.redirectUrl);
+          const token = url.searchParams.get("token");
+          const type = url.searchParams.get("type") as any;
 
-          toast.success(`Welcome, ${json.data.patientName}`);
-          setTimeout(() => {
-            router.push("/");
-            router.refresh();
-          }, 1000);
-        } else {
-          // Voice verified but no session — tell user
-          toast.success("Voice verified! Please sign in with your credentials.");
-          setMode("email");
+          if (token) {
+            const { error } = await supabase.auth.verifyOtp({
+              token_hash: json.data.token || token,
+              type: type || "magiclink",
+            });
+
+            if (!error) {
+              toast.success("Voice verified — signed in!");
+              setTimeout(() => {
+                router.push("/");
+                router.refresh();
+              }, 800);
+              return;
+            }
+          }
         }
+
+        // Fallback: voice was verified, tell user to use email login
+        toast.success("Voice verified! Please complete sign in.");
+        setMode("email");
+        setEmail(voiceEmail);
       } else {
         setVoiceState("failed");
         setVoiceError(json.message || "Voice verification failed");
@@ -188,7 +186,7 @@ export default function LoginPage() {
                 Sign in with Voice
               </div>
               <div className="text-xs text-slate-500">
-                Speak your verification phrase
+                Enter email + speak your phrase
               </div>
             </div>
           </button>
@@ -224,7 +222,7 @@ export default function LoginPage() {
     );
   }
 
-  // Voice login mode
+  // Voice login
   if (mode === "voice") {
     return (
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8">
@@ -244,36 +242,31 @@ export default function LoginPage() {
           </button>
         </div>
         <p className="text-sm text-clinical-muted mb-6">
-          Select your name and speak your verification phrase
+          Enter your email and speak your verification phrase
         </p>
 
         {voiceState === "idle" && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Your Name
+                Email
               </label>
-              <select
-                value={selectedPatient}
-                onChange={(e) => setSelectedPatient(e.target.value)}
+              <input
+                type="email"
+                value={voiceEmail}
+                onChange={(e) => setVoiceEmail(e.target.value)}
                 className="input"
-              >
-                <option value="">Select your name...</option>
-                {patients.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="you@example.com"
+              />
             </div>
 
             <button
               onClick={startRecording}
-              disabled={!selectedPatient}
+              disabled={!voiceEmail.trim()}
               className="w-full btn-primary flex items-center justify-center gap-2 py-3"
             >
               <Mic className="w-5 h-5" />
-              Start Voice Verification
+              Record Voice Phrase
             </button>
           </div>
         )}
@@ -337,7 +330,7 @@ export default function LoginPage() {
                 onClick={() => setMode("email")}
                 className="btn-secondary text-sm"
               >
-                Use Email
+                Use Password
               </button>
             </div>
           </div>
@@ -356,13 +349,11 @@ export default function LoginPage() {
     );
   }
 
-  // Email login mode
+  // Email login
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-xl font-semibold text-slate-900">
-          Email Sign In
-        </h2>
+        <h2 className="text-xl font-semibold text-slate-900">Email Sign In</h2>
         <button
           onClick={() => setMode("choose")}
           className="text-xs text-slate-400 hover:text-slate-600"
@@ -371,7 +362,7 @@ export default function LoginPage() {
         </button>
       </div>
       <p className="text-sm text-clinical-muted mb-6">
-        Sign in with your email and password
+        Sign in with email and password
       </p>
 
       <form onSubmit={handleEmailSubmit} className="space-y-4">
@@ -382,10 +373,7 @@ export default function LoginPage() {
         )}
 
         <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-slate-700 mb-1.5"
-          >
+          <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
             Email
           </label>
           <input
@@ -400,10 +388,7 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-slate-700 mb-1.5"
-          >
+          <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">
             Password
           </label>
           <input

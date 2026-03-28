@@ -1,20 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2, UserPlus, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Loader2,
+  UserPlus,
+  Mic,
+  MicOff,
+  CheckCircle2,
+  ArrowRight,
+} from "lucide-react";
+
+type Step = "credentials" | "voice-setup" | "done";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const [step, setStep] = useState<Step>("credentials");
+
+  // Step 1: credentials
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Step 2: voice phrase
+  const [phrase, setPhrase] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [savingPhrase, setSavingPhrase] = useState(false);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Step 1: Create account
+  const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -26,120 +50,303 @@ export default function SignUpPage() {
     }
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
     });
 
-    if (error) {
-      setError(error.message);
+    if (signUpError) {
+      setError(signUpError.message);
       setLoading(false);
       return;
     }
 
-    setSuccess(true);
+    // Auto sign in after signup
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      // If auto-signin fails (email confirmation required), show message
+      toast.info("Check your email to confirm, then sign in.");
+      setLoading(false);
+      setStep("done");
+      return;
+    }
+
     setLoading(false);
+    setStep("voice-setup");
   };
 
-  if (success) {
+  // Step 2: Record voice phrase
+  const handleRecord = async () => {
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+      if (timerRef.current) clearInterval(timerRef.current);
+      setRecordingTime(0);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        chunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data);
+        };
+        mediaRecorder.onstop = () => {
+          stream.getTracks().forEach((t) => t.stop());
+        };
+        mediaRecorder.start();
+
+        // Speech recognition for live transcription
+        const SR =
+          (window as any).SpeechRecognition ||
+          (window as any).webkitSpeechRecognition;
+        if (SR) {
+          const recognition = new SR();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = "en-US";
+          let finalTranscript = "";
+          recognition.onresult = (event: any) => {
+            let interim = "";
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              if (event.results[i].isFinal)
+                finalTranscript += event.results[i][0].transcript + " ";
+              else interim += event.results[i][0].transcript;
+            }
+            setPhrase(finalTranscript + interim);
+          };
+          recognition.onerror = () => {};
+          recognition.start();
+          recognitionRef.current = recognition;
+        }
+
+        setIsRecording(true);
+        setRecordingTime(0);
+        timerRef.current = setInterval(
+          () => setRecordingTime((t) => t + 1),
+          1000
+        );
+      } catch {
+        toast.error("Microphone access denied");
+      }
+    }
+  };
+
+  // Save phrase
+  const handleSavePhrase = async () => {
+    if (!phrase.trim()) {
+      toast.error("Please record or type your voice phrase");
+      return;
+    }
+    setSavingPhrase(true);
+
+    try {
+      const res = await fetch("/api/auth/set-phrase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phrase: phrase.trim() }),
+      });
+      const json = await res.json();
+
+      if (!json.success) {
+        toast.error(json.message || "Failed to save phrase");
+        setSavingPhrase(false);
+        return;
+      }
+
+      toast.success("Voice phrase saved!");
+      setStep("done");
+    } catch {
+      toast.error("Failed to save phrase");
+    } finally {
+      setSavingPhrase(false);
+    }
+  };
+
+  // Step 1: Credentials form
+  if (step === "credentials") {
     return (
-      <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8 text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 mb-4">
-          <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-        </div>
-        <h2 className="text-xl font-semibold text-slate-900 mb-2">
-          Check your email
+      <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8">
+        <h2 className="text-xl font-semibold text-slate-900 mb-1">
+          Create an account
         </h2>
         <p className="text-sm text-clinical-muted mb-6">
-          We sent a confirmation link to <strong>{email}</strong>. Click it to
-          activate your account.
+          Step 1 of 2 — Set up your credentials
         </p>
-        <Link
-          href="/login"
-          className="text-primary-600 hover:text-primary-700 font-medium text-sm"
-        >
-          Back to sign in
-        </Link>
+
+        <form onSubmit={handleCreateAccount} className="space-y-4">
+          {error && (
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="input"
+              placeholder="you@example.com"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="input"
+              placeholder="Minimum 6 characters"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full btn-primary flex items-center justify-center gap-2 py-2.5"
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <ArrowRight className="w-4 h-4" />
+            )}
+            {loading ? "Creating..." : "Continue"}
+          </button>
+        </form>
+
+        <p className="text-center text-sm text-clinical-muted mt-6">
+          Already have an account?{" "}
+          <Link href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+            Sign in
+          </Link>
+        </p>
       </div>
     );
   }
 
+  // Step 2: Voice phrase setup
+  if (step === "voice-setup") {
+    return (
+      <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8">
+        <h2 className="text-xl font-semibold text-slate-900 mb-1">
+          Set Your Voice Phrase
+        </h2>
+        <p className="text-sm text-clinical-muted mb-6">
+          Step 2 of 2 — Choose a unique phrase for voice sign-in
+        </p>
+
+        <div className="p-3 rounded-lg bg-primary-50 border border-primary-200 text-sm text-primary-800 mb-5">
+          Say a memorable phrase (e.g., &ldquo;Blue Mango Seven&rdquo;). You&apos;ll use
+          this to sign in with your voice.
+        </div>
+
+        <div className="space-y-4">
+          {/* Record button */}
+          <div className="flex justify-center">
+            <button
+              onClick={handleRecord}
+              className={`w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-lg ${
+                isRecording
+                  ? "bg-red-500 hover:bg-red-600 animate-pulse shadow-red-200"
+                  : "bg-primary-600 hover:bg-primary-700 shadow-primary-200"
+              }`}
+            >
+              {isRecording ? (
+                <MicOff className="w-8 h-8 text-white" />
+              ) : (
+                <Mic className="w-8 h-8 text-white" />
+              )}
+            </button>
+          </div>
+          <p className="text-center text-sm text-slate-500">
+            {isRecording
+              ? `Recording... ${recordingTime}s — tap to stop`
+              : "Tap to record your phrase"}
+          </p>
+
+          {/* Phrase input */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Your Phrase
+            </label>
+            <input
+              type="text"
+              value={phrase}
+              onChange={(e) => setPhrase(e.target.value)}
+              className="input"
+              placeholder="Your phrase will appear here, or type it"
+            />
+          </div>
+
+          <button
+            onClick={handleSavePhrase}
+            disabled={!phrase.trim() || savingPhrase}
+            className="w-full btn-primary flex items-center justify-center gap-2 py-2.5"
+          >
+            {savingPhrase ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4" />
+            )}
+            {savingPhrase ? "Saving..." : "Save Voice Phrase"}
+          </button>
+
+          <button
+            onClick={() => {
+              setStep("done");
+              router.push("/");
+              router.refresh();
+            }}
+            className="w-full btn-ghost text-sm text-slate-400"
+          >
+            Skip for now
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Done
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8">
-      <h2 className="text-xl font-semibold text-slate-900 mb-1">
-        Create an account
+    <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8 text-center">
+      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 mb-4">
+        <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+      </div>
+      <h2 className="text-xl font-semibold text-slate-900 mb-2">
+        You&apos;re all set!
       </h2>
       <p className="text-sm text-clinical-muted mb-6">
-        Get started with VoxVitals monitoring
+        Your account is ready. You can now sign in with your voice or email.
       </p>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-slate-700 mb-1.5"
-          >
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow"
-            placeholder="you@example.com"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-slate-700 mb-1.5"
-          >
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow"
-            placeholder="Minimum 6 characters"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full btn-primary flex items-center justify-center gap-2 py-2.5"
-        >
-          {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <UserPlus className="w-4 h-4" />
-          )}
-          {loading ? "Creating account..." : "Create Account"}
-        </button>
-      </form>
-
-      <p className="text-center text-sm text-clinical-muted mt-6">
-        Already have an account?{" "}
-        <Link
-          href="/login"
-          className="text-primary-600 hover:text-primary-700 font-medium"
-        >
-          Sign in
-        </Link>
-      </p>
+      <button
+        onClick={() => {
+          router.push("/");
+          router.refresh();
+        }}
+        className="btn-primary px-6"
+      >
+        Get Started
+      </button>
     </div>
   );
 }
