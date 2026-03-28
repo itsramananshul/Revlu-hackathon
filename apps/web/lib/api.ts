@@ -38,11 +38,21 @@ export const api = {
     request<import("@trialpulse/types").CheckIn[]>(
       `/checkins/patient/${patientId}`
     ),
-  createCheckIn: (data: { patientId: string; transcript: string }) =>
+  createCheckIn: (data: {
+    patientId: string;
+    transcript: string;
+    audioUrl?: string;
+  }) =>
     request<import("@trialpulse/types").CheckIn>("/checkins", {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  analyzeCheckIn: (checkInId: string) =>
+    request<{
+      analysis: import("@trialpulse/types").AiAnalysis;
+      alerts: import("@trialpulse/types").Alert[];
+      patientStatusUpdated: string | null;
+    }>(`/checkins/${checkInId}/analyze`, { method: "POST" }),
 
   // AI
   analyzeTranscript: (transcript: string) =>

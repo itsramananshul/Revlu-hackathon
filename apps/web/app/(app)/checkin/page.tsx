@@ -26,6 +26,7 @@ export default function CheckInPage() {
   const [transcript, setTranscript] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [pipelineStep, setPipelineStep] = useState("");
   const [analysis, setAnalysis] = useState<AiAnalysis | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -63,6 +64,7 @@ export default function CheckInPage() {
     }
 
     setIsAnalyzing(true);
+    setPipelineStep("Uploading audio...");
     try {
       // Upload audio if present
       let audioUrl: string | undefined;
@@ -80,19 +82,32 @@ export default function CheckInPage() {
         audioUrl = urlData.publicUrl;
       }
 
-      const result = await api.analyzeTranscript(transcript);
-      setAnalysis(result);
-
-      await api.createCheckIn({
+      // Step 1: Save check-in to database
+      setPipelineStep("Saving check-in...");
+      const checkIn = await api.createCheckIn({
         patientId: selectedPatient,
         transcript,
         ...(audioUrl && { audioUrl }),
       });
 
+      // Step 2: Run AI analysis → save → auto-generate alerts → update patient
+      setPipelineStep("Running AI analysis...");
+      const pipelineResult = await api.analyzeCheckIn(checkIn.id);
+      setAnalysis(pipelineResult.analysis);
+
       setSubmitted(true);
-      toast.success("Check-in submitted and analyzed");
+      setPipelineStep("");
+
+      if (pipelineResult.alerts.length > 0) {
+        toast.warning(
+          `${pipelineResult.alerts.length} alert(s) generated — check dashboard`
+        );
+      } else {
+        toast.success("Check-in submitted and analyzed");
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Analysis failed");
+      setPipelineStep("");
     } finally {
       setIsAnalyzing(false);
     }
@@ -314,7 +329,7 @@ export default function CheckInPage() {
             {isAnalyzing ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Analyzing...
+                {pipelineStep || "Processing..."}
               </>
             ) : (
               <>

@@ -155,7 +155,13 @@ export default function DashboardPage() {
               return (
                 <div
                   key={alert.id}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-slate-50/80 border border-slate-100 hover:bg-slate-100/60 transition-colors"
+                  className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+                    alert.severity === "critical"
+                      ? "bg-red-50/60 border-red-200 border-l-4 border-l-red-500"
+                      : alert.severity === "high"
+                        ? "bg-amber-50/40 border-amber-200 border-l-4 border-l-amber-500"
+                        : "bg-slate-50/80 border-slate-100 hover:bg-slate-100/60"
+                  }`}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
