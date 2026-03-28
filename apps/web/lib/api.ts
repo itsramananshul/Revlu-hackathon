@@ -29,6 +29,16 @@ export const api = {
   getPatients: () => request<import("@trialpulse/types").Patient[]>("/patients"),
   getPatient: (id: string) =>
     request<import("@trialpulse/types").Patient>(`/patients/${id}`),
+  createPatient: (data: {
+    name: string;
+    age: number;
+    condition: string;
+    trialId: string;
+  }) =>
+    request<import("@trialpulse/types").Patient>("/patients", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   // Check-ins
   getCheckIns: () => request<import("@trialpulse/types").CheckIn[]>("/checkins"),
@@ -75,4 +85,25 @@ export const api = {
   // Analytics
   getAnalyticsSummary: () =>
     request<import("@trialpulse/types").AnalyticsSummary>("/analytics/summary"),
+
+  // Voice Verification
+  verifyVoice: async (
+    audioFile: File,
+    patientId: string
+  ): Promise<import("@trialpulse/types").VoiceVerificationResult> => {
+    const formData = new FormData();
+    formData.append("audio", audioFile);
+    formData.append("patientId", patientId);
+
+    const res = await fetch("/api/voice/verify", {
+      method: "POST",
+      body: formData,
+    });
+
+    const json = await res.json();
+    if (!json.success) {
+      throw new Error(json.message || "Voice verification failed");
+    }
+    return json.data;
+  },
 };

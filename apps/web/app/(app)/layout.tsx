@@ -1,42 +1,71 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
-import { ThemeProvider } from "@/lib/theme-context";
-import { ThemeToggle } from "@/components/ThemeToggle";
+
+type Role = "patient" | "clinician" | null;
+
+function AppContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [role, setRole] = useState<Role>(null);
+  const [ready, setReady] = useState(false);
+
+  // Read role on mount AND on every pathname change
+  useEffect(() => {
+    const stored = localStorage.getItem("voxvitals-role") as Role;
+    setRole(stored);
+    setReady(true);
+  }, [pathname]);
+
+  // Handle redirects
+  useEffect(() => {
+    if (!ready || pathname === "/") return;
+
+    if (!role) {
+      router.replace("/");
+      return;
+    }
+
+    if (
+      role === "patient" &&
+      (pathname === "/dashboard" || pathname.startsWith("/patient/"))
+    ) {
+      router.replace("/checkin");
+    }
+  }, [ready, role, pathname, router]);
+
+  // Role selection page — no sidebar
+  if (pathname === "/") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
+        {children}
+      </div>
+    );
+  }
+
+  // Wait for localStorage
+  if (!ready || !role) {
+    return (
+      <div className="min-h-screen bg-clinical-bg flex items-center justify-center">
+        <div className="animate-pulse text-clinical-muted">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen bg-clinical-bg">
+      <Sidebar role={role} />
+      <main className="flex-1 md:ml-64 p-4 md:p-8">{children}</main>
+    </div>
+  );
+}
 
 export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const isRoleSelection = pathname === "/";
-
-  if (isRoleSelection) {
-    return (
-      <ThemeProvider>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 transition-colors duration-200">
-          <div className="fixed top-4 right-4 z-50">
-            <ThemeToggle />
-          </div>
-          {children}
-        </div>
-      </ThemeProvider>
-    );
-  }
-
-  return (
-    <ThemeProvider>
-      <div className="flex min-h-screen bg-clinical-bg dark:bg-slate-950 transition-colors duration-200">
-        <Sidebar />
-        <main className="flex-1 md:ml-64 p-4 md:p-8">
-          <div className="flex justify-end mb-4">
-            <ThemeToggle />
-          </div>
-          {children}
-        </main>
-      </div>
-    </ThemeProvider>
-  );
+  return <AppContent>{children}</AppContent>;
 }

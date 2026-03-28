@@ -19,6 +19,14 @@ export interface Patient {
   enrolledAt: string;
   status: PatientStatus;
   latestCheckInId?: string;
+  voicePhrase?: string;
+}
+
+// --- Voice Verification ---
+export interface VoiceVerificationResult {
+  verified: boolean;
+  transcript: string;
+  reason: "matched" | "phrase_mismatch" | "transcription_failed" | "missing_phrase" | "no_audio";
 }
 
 export type PatientStatus = "active" | "flagged" | "dropped" | "completed";

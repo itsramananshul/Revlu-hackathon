@@ -28,6 +28,9 @@ import {
   Shield,
   UserX,
   Mic,
+  UserPlus,
+  X,
+  Loader2,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -37,6 +40,42 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAddPatient, setShowAddPatient] = useState(false);
+  const [addingPatient, setAddingPatient] = useState(false);
+  const [newPatient, setNewPatient] = useState({
+    name: "",
+    age: "",
+    condition: "",
+  });
+
+  const generateTrialId = () => {
+    const num = String(patients.length + 1).padStart(3, "0");
+    return `TRIAL-VX-${num}`;
+  };
+
+  const handleAddPatient = async () => {
+    if (!newPatient.name || !newPatient.age || !newPatient.condition) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    setAddingPatient(true);
+    try {
+      await api.createPatient({
+        name: newPatient.name,
+        age: Number(newPatient.age),
+        condition: newPatient.condition,
+        trialId: generateTrialId(),
+      });
+      toast.success("Patient added");
+      setShowAddPatient(false);
+      setNewPatient({ name: "", age: "", condition: "" });
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add patient");
+    } finally {
+      setAddingPatient(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -89,21 +128,103 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             Dashboard
           </h1>
           <p className="section-subtitle mt-0.5">
           Clinical trial monitoring overview
         </p>
         </div>
-        <Link
-          href="/checkin"
-          className="btn-primary flex items-center gap-2"
-        >
-          <Mic className="w-4 h-4" />
-          New Patient Check-in
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAddPatient(true)}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add Patient
+          </button>
+          <Link
+            href="/checkin"
+            className="btn-primary flex items-center gap-2"
+          >
+            <Mic className="w-4 h-4" />
+            New Check-in
+          </Link>
+        </div>
       </div>
+
+      {/* Add Patient Modal */}
+      {showAddPatient && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-slate-900">Add New Patient</h2>
+              <button
+                onClick={() => setShowAddPatient(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={newPatient.name}
+                  onChange={(e) =>
+                    setNewPatient((p) => ({ ...p, name: e.target.value }))
+                  }
+                  className="input"
+                  placeholder="e.g. Sarah Chen"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Age
+                </label>
+                <input
+                  type="number"
+                  value={newPatient.age}
+                  onChange={(e) =>
+                    setNewPatient((p) => ({ ...p, age: e.target.value }))
+                  }
+                  className="input"
+                  placeholder="e.g. 34"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Condition
+                </label>
+                <input
+                  type="text"
+                  value={newPatient.condition}
+                  onChange={(e) =>
+                    setNewPatient((p) => ({ ...p, condition: e.target.value }))
+                  }
+                  className="input"
+                  placeholder="e.g. Rheumatoid Arthritis"
+                />
+              </div>
+              <button
+                onClick={handleAddPatient}
+                disabled={addingPatient}
+                className="btn-primary w-full flex items-center justify-center gap-2 py-2.5"
+              >
+                {addingPatient ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <UserPlus className="w-4 h-4" />
+                )}
+                {addingPatient ? "Adding..." : "Add Patient"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       {loading ? (
@@ -170,10 +291,10 @@ export default function DashboardPage() {
                   key={alert.id}
                   className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
                     alert.severity === "critical"
-                      ? "bg-red-50/60 dark:bg-red-950/40 border-red-200 dark:border-red-800 border-l-4 border-l-red-500 alert-critical"
+                      ? "bg-red-50/60 border-red-200 border-l-4 border-l-red-500 alert-critical"
                       : alert.severity === "high"
-                        ? "bg-amber-50/40 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 border-l-4 border-l-amber-500"
-                        : "bg-slate-50/80 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700 hover:bg-slate-100/60"
+                        ? "bg-amber-50/40 border-amber-200 border-l-4 border-l-amber-500"
+                        : "bg-slate-50/80 border-slate-100 hover:bg-slate-100/60"
                   }`}
                 >
                   <div className="flex-1 min-w-0">

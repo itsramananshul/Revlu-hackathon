@@ -6,64 +6,56 @@
   body {
     @apply bg-clinical-bg text-slate-900 antialiased;
   }
-  .dark body,
-  .dark {
-    @apply bg-slate-950 text-slate-100;
-  }
   * {
     @apply border-clinical-border;
-  }
-  .dark * {
-    @apply border-slate-800;
   }
 }
 
 @layer components {
   .card {
-    @apply bg-white dark:bg-slate-900 rounded-xl border border-clinical-border/80 dark:border-slate-800 shadow-sm p-5 transition-all duration-200;
+    @apply bg-white rounded-xl border border-clinical-border/80 shadow-sm p-5 transition-all duration-200;
   }
   .card-hover {
-    @apply card hover:shadow-md hover:border-slate-300/80 dark:hover:border-slate-700;
+    @apply card hover:shadow-md hover:border-slate-300/80;
   }
   .badge {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide;
   }
   .badge-success {
-    @apply badge bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:ring-emerald-800;
+    @apply badge bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200;
   }
   .badge-warning {
-    @apply badge bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:ring-amber-800;
+    @apply badge bg-amber-50 text-amber-700 ring-1 ring-amber-200;
   }
   .badge-danger {
-    @apply badge bg-red-50 text-red-700 ring-1 ring-red-200 dark:bg-red-950 dark:text-red-400 dark:ring-red-800;
+    @apply badge bg-red-50 text-red-700 ring-1 ring-red-200;
   }
   .badge-critical {
-    @apply badge bg-red-100 text-red-800 ring-1 ring-red-300 dark:bg-red-950 dark:text-red-300 dark:ring-red-700;
+    @apply badge bg-red-100 text-red-800 ring-1 ring-red-300;
   }
   .badge-neutral {
-    @apply badge bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700;
+    @apply badge bg-slate-100 text-slate-600 ring-1 ring-slate-200;
   }
   .btn-primary {
     @apply bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-medium px-4 py-2 rounded-lg transition-all duration-150 shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none;
   }
   .btn-secondary {
-    @apply bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 text-slate-700 dark:text-slate-300 font-medium px-4 py-2 rounded-lg border border-clinical-border dark:border-slate-700 transition-all duration-150 shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 font-medium px-4 py-2 rounded-lg border border-clinical-border transition-all duration-150 shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-ghost {
-    @apply text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 font-medium px-3 py-1.5 rounded-lg transition-colors duration-150;
+    @apply text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium px-3 py-1.5 rounded-lg transition-colors duration-150;
   }
   .input {
-    @apply w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all duration-150;
+    @apply w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all duration-150;
   }
   .section-title {
-    @apply text-lg font-semibold text-slate-900 dark:text-white tracking-tight;
+    @apply text-lg font-semibold text-slate-900 tracking-tight;
   }
   .section-subtitle {
-    @apply text-sm text-clinical-muted dark:text-slate-400;
+    @apply text-sm text-clinical-muted;
   }
 }
 
-/* Alert pulse animation for critical items */
 @keyframes pulse-critical {
   0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.15); }
   50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }

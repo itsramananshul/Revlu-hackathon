@@ -19,6 +19,7 @@ create table patients (
   enrolled_at timestamptz not null default now(),
   status text not null default 'active'
     check (status in ('active', 'flagged', 'dropped', 'completed')),
+  voice_phrase text,
   latest_check_in_id uuid,
   created_at timestamptz not null default now()
 );

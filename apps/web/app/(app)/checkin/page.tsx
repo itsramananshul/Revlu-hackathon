@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Patient, AiAnalysis } from "@trialpulse/types";
 import { api } from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
+import { VoiceVerification } from "@/components/VoiceVerification";
 import { toast } from "sonner";
 import {
   Mic,
@@ -23,6 +24,7 @@ export default function CheckInPage() {
   const router = useRouter();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState("");
+  const [voiceVerified, setVoiceVerified] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -32,6 +34,7 @@ export default function CheckInPage() {
   const [hasAdverseEvent, setHasAdverseEvent] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [role, setRole] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -39,6 +42,7 @@ export default function CheckInPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    setRole(localStorage.getItem("voxvitals-role"));
     api
       .getPatients()
       .then(setPatients)
@@ -172,8 +176,8 @@ export default function CheckInPage() {
         <div
           className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-6 ${
             hasAdverseEvent
-              ? "bg-red-100 dark:bg-red-950"
-              : "bg-emerald-100 dark:bg-emerald-950"
+              ? "bg-red-100"
+              : "bg-emerald-100"
           }`}
         >
           {hasAdverseEvent ? (
@@ -183,28 +187,44 @@ export default function CheckInPage() {
           )}
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">
           Check-in Complete
         </h1>
 
-        <p className="text-slate-600 dark:text-slate-400 mb-2">
+        <p className="text-slate-600 mb-2">
           {hasAdverseEvent
             ? "We've identified something that may need attention. Your care team will review this shortly."
             : "Thank you for the update. Everything has been recorded and analyzed."}
         </p>
 
-        {alertCount > 0 && (
-          <p className="text-sm font-medium text-red-600 dark:text-red-400 mb-8">
+        {role === "clinician" && alertCount > 0 && (
+          <p className="text-sm font-medium text-red-600 mb-4">
             {alertCount} alert{alertCount > 1 ? "s" : ""} generated for review
           </p>
         )}
 
-        <button
-          onClick={() => router.push("/dashboard")}
-          className="btn-primary px-8 py-3 text-base"
-        >
-          View Dashboard
-        </button>
+        <div className="mt-6">
+          {role === "clinician" ? (
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="btn-primary px-8 py-3 text-base"
+            >
+              View Dashboard
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setSubmitted(false);
+                setTranscript("");
+                setAudioFile(null);
+                setSelectedPatient("");
+              }}
+              className="btn-primary px-8 py-3 text-base"
+            >
+              Submit Another Check-in
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -220,7 +240,7 @@ export default function CheckInPage() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             New Patient Check-in
           </h1>
           <p className="section-subtitle mt-0.5">
@@ -233,14 +253,17 @@ export default function CheckInPage() {
       <div className="card">
         <label
           htmlFor="patient-select"
-          className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2"
+          className="block text-sm font-medium text-slate-700 mb-2"
         >
           Patient
         </label>
         <select
           id="patient-select"
           value={selectedPatient}
-          onChange={(e) => setSelectedPatient(e.target.value)}
+          onChange={(e) => {
+            setSelectedPatient(e.target.value);
+            setVoiceVerified(false);
+          }}
           className="input"
         >
           <option value="">Select a patient...</option>
@@ -252,9 +275,22 @@ export default function CheckInPage() {
         </select>
       </div>
 
+      {/* Voice Verification — shown after patient is selected, before check-in form */}
+      {selectedPatient && !voiceVerified && (
+        <VoiceVerification
+          patientId={selectedPatient}
+          onVerified={() => setVoiceVerified(true)}
+          onSkip={() => setVoiceVerified(true)}
+        />
+      )}
+
+      {/* Voice Recording — only shown after verification */}
+      {(!selectedPatient || voiceVerified) && (
+      <>
+
       {/* Voice Recording */}
       <div className="card">
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">
+        <label className="block text-sm font-medium text-slate-700 mb-4">
           Voice Recording
         </label>
         <div className="flex items-center gap-4">
@@ -274,12 +310,12 @@ export default function CheckInPage() {
           </button>
 
           <div className="flex-1">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            <p className="text-sm font-medium text-slate-700">
               {isRecording
                 ? `Recording... ${recordingTime}s — Click to stop`
                 : "Click to start recording"}
             </p>
-            <p className="text-xs text-clinical-muted dark:text-slate-500 mt-0.5">
+            <p className="text-xs text-clinical-muted mt-0.5">
               {isRecording
                 ? "Speak clearly into your microphone"
                 : "Or upload an audio file / type transcript below"}
@@ -303,9 +339,9 @@ export default function CheckInPage() {
         </div>
 
         {audioFile && (
-          <div className="mt-3 flex items-center gap-2 p-2 rounded-lg bg-primary-50 dark:bg-primary-950 border border-primary-200 dark:border-primary-800">
+          <div className="mt-3 flex items-center gap-2 p-2 rounded-lg bg-primary-50 border border-primary-200">
             <FileAudio className="w-4 h-4 text-primary-600" />
-            <span className="text-sm text-primary-700 dark:text-primary-300 flex-1 truncate">
+            <span className="text-sm text-primary-700 flex-1 truncate">
               {audioFile.name}
             </span>
             <button
@@ -322,7 +358,7 @@ export default function CheckInPage() {
       <div className="card">
         <label
           htmlFor="transcript"
-          className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2"
+          className="block text-sm font-medium text-slate-700 mb-2"
         >
           Transcript
         </label>
@@ -354,6 +390,9 @@ export default function CheckInPage() {
           </>
         )}
       </button>
+
+      </>
+      )}
     </div>
   );
 }
