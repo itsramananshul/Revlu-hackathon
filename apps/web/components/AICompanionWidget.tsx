@@ -44,9 +44,16 @@ const SYMPTOM_KEYWORDS = [
   "fever", "chills", "appetite", "weight",
 ];
 
+const NEGATION_PATTERNS = ["no ", "not ", "don't ", "doesn't ", "without ", "never ", "haven't ", "deny ", "denies "];
+
 function detectSymptoms(text: string): string[] {
   const lower = text.toLowerCase();
-  return SYMPTOM_KEYWORDS.filter((kw) => lower.includes(kw));
+  return SYMPTOM_KEYWORDS.filter((kw) => {
+    const idx = lower.indexOf(kw);
+    if (idx === -1) return false;
+    const prefix = lower.slice(Math.max(0, idx - 15), idx);
+    return !NEGATION_PATTERNS.some((neg) => prefix.includes(neg));
+  });
 }
 
 // ── Component ───────────────────────────────────────────────
@@ -234,7 +241,7 @@ export function AICompanionWidget({ patient }: { patient: Patient | null }) {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 w-[380px] h-[540px] flex flex-col rounded-2xl border border-clinical-border bg-white shadow-2xl overflow-hidden">
+    <div className="fixed bottom-6 right-6 z-40 w-[380px] h-[540px] flex flex-col rounded-2xl border border-clinical-border glass shadow-2xl overflow-hidden">
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-primary-600 text-white">
         <div className="flex items-center gap-2">

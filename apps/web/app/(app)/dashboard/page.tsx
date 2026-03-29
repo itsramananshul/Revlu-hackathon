@@ -357,24 +357,28 @@ export default function DashboardPage() {
               label="Monitored"
               value={mergedPatients.length}
               accent="bg-primary-50 text-primary-600"
+              index={0}
             />
             <MiniStatCard
               icon={<AlertTriangle className="w-4 h-4" />}
               label="High Risk"
               value={highRiskCount}
               accent="bg-amber-50 text-amber-600"
+              index={1}
             />
             <MiniStatCard
               icon={<Flame className="w-4 h-4" />}
               label="Emergencies"
               value={emergencyCount}
               accent="bg-red-50 text-red-600"
+              index={2}
             />
             <MiniStatCard
               icon={<Activity className="w-4 h-4" />}
               label="Check-ins Today"
               value={checkinsToday}
               accent="bg-emerald-50 text-emerald-600"
+              index={3}
             />
           </div>
         )}
@@ -382,7 +386,7 @@ export default function DashboardPage() {
 
       {/* ── Smart Alerts Bar ─────────────────────────────── */}
       {!loading && smartAlerts.length > 0 && (
-        <div className="flex-shrink-0 mb-3">
+        <div className="flex-shrink-0 mb-3 animate-slide-in-right">
           <SmartAlertBar
             alerts={smartAlerts}
             onAlertClick={handleSelectPatient}
@@ -601,9 +605,12 @@ export default function DashboardPage() {
 
 // ── Mini Stat Card ──────────────────────────────────────────
 
-function MiniStatCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent: string }) {
+function MiniStatCard({ icon, label, value, accent, index = 0 }: { icon: React.ReactNode; label: string; value: number; accent: string; index?: number }) {
   return (
-    <div className="card py-2.5 px-3 flex items-center gap-2.5">
+    <div
+      className="card py-2.5 px-3 flex items-center gap-2.5 hover:-translate-y-0.5 hover:shadow-md transition-all cursor-default animate-fade-in-up"
+      style={{ animationDelay: `${index * 80}ms` }}
+    >
       <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${accent}`}>{icon}</div>
       <div>
         <div className="text-lg font-bold text-slate-900 tabular-nums leading-tight">{value}</div>

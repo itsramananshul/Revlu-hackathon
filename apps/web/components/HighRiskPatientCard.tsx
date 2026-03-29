@@ -48,13 +48,14 @@ export function HighRiskPatientCard({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left rounded-xl border shadow-sm p-3.5 border-l-4 transition-all duration-150 cursor-pointer ${tierBorder[riskTier]} ${tierBg[riskTier]} ${
+      className={`w-full text-left rounded-xl border shadow-sm p-3.5 border-l-4 transition-all duration-150 cursor-pointer animate-fade-in-up ${tierBorder[riskTier]} ${tierBg[riskTier]} ${
         riskTier === "critical" ? "alert-critical" : ""
       } ${
         isSelected
           ? "ring-2 ring-primary-500 shadow-md border-primary-300"
           : "hover:shadow-md hover:border-slate-300/80"
       }`}
+      style={{ animationDelay: `${Math.min(rank * 50, 500)}ms` }}
     >
       {/* Top row: rank + name + status */}
       <div className="flex items-center gap-2.5">

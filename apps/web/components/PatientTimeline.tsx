@@ -6,6 +6,7 @@ import type {
   PainDataPoint,
 } from "@/lib/patient-timeline";
 import { EmptyState } from "@/components/EmptyState";
+import { AreaChart, Area, ResponsiveContainer, Tooltip, YAxis } from "recharts";
 import {
   Mic,
   Bell,
@@ -62,55 +63,43 @@ const FILTERS: { key: TimelineEventType | "all"; label: string }[] = [
 function PainSparkline({ data }: { data: PainDataPoint[] }) {
   if (data.length < 2) return null;
 
-  const maxPain = 10;
-  const width = 200;
-  const height = 40;
-  const padX = 4;
-  const padY = 4;
-  const plotW = width - padX * 2;
-  const plotH = height - padY * 2;
-
-  const points = data.map((d, i) => ({
-    x: padX + (i / (data.length - 1)) * plotW,
-    y: padY + plotH - (d.maxPain / maxPain) * plotH,
-  }));
-
-  const pathD = points
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
-    .join(" ");
-
-  const lastPoint = points[points.length - 1];
   const lastPain = data[data.length - 1].maxPain;
-  const dotColor =
+  const strokeColor =
     lastPain >= 7 ? "#ef4444" : lastPain >= 4 ? "#f59e0b" : "#10b981";
+  const fillColor =
+    lastPain >= 7 ? "#fecaca" : lastPain >= 4 ? "#fef3c7" : "#d1fae5";
+
+  const chartData = data.map((d) => ({
+    date: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    pain: d.maxPain,
+  }));
 
   return (
     <div className="flex items-center gap-3">
-      <svg
-        width={width}
-        height={height}
-        className="flex-shrink-0"
-        viewBox={`0 0 ${width} ${height}`}
-      >
-        <path
-          d={pathD}
-          fill="none"
-          stroke="#94a3b8"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <circle
-          cx={lastPoint.x}
-          cy={lastPoint.y}
-          r="3"
-          fill={dotColor}
-        />
-      </svg>
+      <div className="w-[200px] h-[48px] flex-shrink-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+            <YAxis domain={[0, 10]} hide />
+            <Tooltip
+              contentStyle={{ fontSize: 10, borderRadius: 6, border: "1px solid #e2e8f0", padding: "4px 8px" }}
+              formatter={(value: number) => [`${value}/10`, "Pain"]}
+            />
+            <Area
+              type="monotone"
+              dataKey="pain"
+              stroke={strokeColor}
+              strokeWidth={2}
+              fill={fillColor}
+              dot={false}
+              activeDot={{ r: 3, fill: strokeColor }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
       <div className="text-right">
         <div
           className="text-sm font-bold tabular-nums"
-          style={{ color: dotColor }}
+          style={{ color: strokeColor }}
         >
           {lastPain}/10
         </div>

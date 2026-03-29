@@ -61,11 +61,11 @@ export function EmergencyButton({ patientId }: { patientId: string }) {
       {/* ── Floating Emergency Button ──────────────────────── */}
       <button
         onClick={() => setShowModal(true)}
-        className="fixed top-20 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-200 transition-all hover:scale-105 hover:shadow-xl group"
-        aria-label="Emergency - Am I Okay?"
+        className="fixed top-20 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-300/50 transition-all hover:scale-105 hover:shadow-xl emergency-pulse group"
+        aria-label="Emergency - I Need Help Now"
       >
         <ShieldAlert className="w-5 h-5 flex-shrink-0" />
-        <span className="text-sm font-semibold">Am I Okay?</span>
+        <span className="text-sm font-semibold">I Need Help Now</span>
       </button>
 
       {/* ── Confirmation Modal ─────────────────────────────── */}

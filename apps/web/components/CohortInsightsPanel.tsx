@@ -8,8 +8,16 @@ import {
   ShieldAlert,
   BarChart3,
 } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
-// ── Simple bar chart (no external deps) ─────────────────────
+// ── Donut chart for risk distribution ───────────────────────
+
+const RISK_COLORS = {
+  Critical: "#ef4444",
+  High: "#f59e0b",
+  Medium: "#60a5fa",
+  Low: "#10b981",
+};
 
 function RiskDistributionChart({
   distribution,
@@ -23,57 +31,50 @@ function RiskDistributionChart({
     distribution.low;
   if (total === 0) return <p className="text-xs text-clinical-muted">No data</p>;
 
-  const bars = [
-    {
-      label: "Critical",
-      value: distribution.critical,
-      color: "bg-red-500",
-      textColor: "text-red-700",
-    },
-    {
-      label: "High",
-      value: distribution.high,
-      color: "bg-amber-500",
-      textColor: "text-amber-700",
-    },
-    {
-      label: "Medium",
-      value: distribution.medium,
-      color: "bg-blue-400",
-      textColor: "text-blue-700",
-    },
-    {
-      label: "Low",
-      value: distribution.low,
-      color: "bg-emerald-500",
-      textColor: "text-emerald-700",
-    },
-  ];
-
-  const maxVal = Math.max(...bars.map((b) => b.value), 1);
+  const data = [
+    { name: "Critical", value: distribution.critical },
+    { name: "High", value: distribution.high },
+    { name: "Medium", value: distribution.medium },
+    { name: "Low", value: distribution.low },
+  ].filter((d) => d.value > 0);
 
   return (
-    <div className="space-y-2">
-      {bars.map((bar) => (
-        <div key={bar.label} className="flex items-center gap-2">
-          <span
-            className={`text-[11px] font-medium w-14 text-right ${bar.textColor}`}
-          >
-            {bar.label}
-          </span>
-          <div className="flex-1 h-5 bg-slate-100 rounded overflow-hidden">
-            <div
-              className={`h-full rounded transition-all duration-500 ${bar.color}`}
-              style={{
-                width: `${Math.max((bar.value / maxVal) * 100, bar.value > 0 ? 8 : 0)}%`,
-              }}
+    <div className="flex items-center gap-4">
+      <div className="w-[120px] h-[120px] flex-shrink-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={35}
+              outerRadius={55}
+              paddingAngle={3}
+              dataKey="value"
+              strokeWidth={0}
+            >
+              {data.map((entry) => (
+                <Cell key={entry.name} fill={RISK_COLORS[entry.name as keyof typeof RISK_COLORS]} />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e2e8f0" }}
             />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="space-y-1.5">
+        {data.map((d) => (
+          <div key={d.name} className="flex items-center gap-2">
+            <span
+              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+              style={{ backgroundColor: RISK_COLORS[d.name as keyof typeof RISK_COLORS] }}
+            />
+            <span className="text-[11px] text-slate-600">{d.name}</span>
+            <span className="text-[11px] font-bold text-slate-800 tabular-nums">{d.value}</span>
           </div>
-          <span className="text-xs font-bold text-slate-700 w-6 text-right tabular-nums">
-            {bar.value}
-          </span>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

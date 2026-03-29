@@ -135,7 +135,7 @@ export function VoiceVerification({
           </button>
           <button
             onClick={onSkip}
-            className="btn-ghost text-xs w-full mt-2 flex items-center justify-center gap-1 text-slate-400"
+            className="text-[11px] w-full mt-3 flex items-center justify-center gap-1 text-slate-300 hover:text-slate-500 transition-colors"
           >
             Skip verification
             <ChevronRight className="w-3 h-3" />
@@ -204,7 +204,7 @@ export function VoiceVerification({
               <RotateCcw className="w-4 h-4" />
               Try Again
             </button>
-            <button onClick={onSkip} className="btn-secondary text-sm">
+            <button onClick={onSkip} className="text-[11px] text-slate-400 hover:text-slate-600 transition-colors px-3 py-2">
               Skip
             </button>
           </div>

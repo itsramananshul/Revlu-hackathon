@@ -7,6 +7,25 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      keyframes: {
+        fadeInUp: {
+          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        slideInRight: {
+          "0%": { opacity: "0", transform: "translateX(16px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        scaleIn: {
+          "0%": { opacity: "0", transform: "scale(0.95)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+      },
+      animation: {
+        "fade-in-up": "fadeInUp 0.5s ease-out both",
+        "slide-in-right": "slideInRight 0.4s ease-out both",
+        "scale-in": "scaleIn 0.3s ease-out both",
+      },
       colors: {
         primary: {
           50: "#eff6ff",
