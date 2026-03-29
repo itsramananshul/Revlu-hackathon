@@ -26,7 +26,10 @@ async function request<T>(
 
 export const api = {
   // Patients
-  getPatients: () => request<import("@trialpulse/types").Patient[]>("/patients"),
+  getPatients: () => {
+    const role = typeof window !== "undefined" ? localStorage.getItem("voxvitals-role") || "" : "";
+    return request<import("@trialpulse/types").Patient[]>(`/patients?role=${role}`);
+  },
   getPatient: (id: string) =>
     request<import("@trialpulse/types").Patient>(`/patients/${id}`),
   createPatient: (data: {

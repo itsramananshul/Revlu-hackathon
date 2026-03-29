@@ -2,40 +2,21 @@ import { createClient } from "@/lib/supabase/server";
 import { successResponse, errorResponse } from "@/lib/api-utils";
 import { mapPatient } from "@/lib/db-mappers";
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return errorResponse("Unauthorized", 401);
 
-  // Determine role — try multiple sources
-  const metaRole = user.user_metadata?.voxvitals_role; // set by role selection UI
-  let role: string | null = metaRole || null;
-
-  if (!role) {
-    // Fallback: check if user has a patient record (= they're a patient)
-    const { data: ownPatient } = await supabase
-      .from("patients")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    // If they have a patient record, they might be a patient
-    // But for demo safety: only restrict if app_users says "patient"
-    const { data: appUser } = await supabase
-      .from("app_users")
-      .select("role")
-      .eq("auth_id", user.id)
-      .maybeSingle();
-
-    // Only filter if BOTH: app_users says patient AND they have a patient record
-    role = (appUser?.role === "patient" && ownPatient) ? "patient" : "clinician";
-  }
+  // Role comes from query param (set by frontend based on localStorage)
+  const url = new URL(request.url);
+  const clientRole = url.searchParams.get("role");
 
   let query = supabase.from("patients").select("*");
 
-  if (role === "patient") {
+  if (clientRole === "patient") {
+    // Patient only sees their own record
     query = query.eq("user_id", user.id);
   }
   // Doctors, clinicians, and lead doctors see all patients
