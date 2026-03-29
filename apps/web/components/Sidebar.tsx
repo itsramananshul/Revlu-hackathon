@@ -25,14 +25,14 @@ import {
 const clinicianNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/checkin", label: "New Check-in", icon: Mic },
-  { href: "/settings", label: "Voice Phrase", icon: ShieldCheck },
+  { href: "/settings", label: "Settings", icon: ShieldCheck },
 ];
 
 const patientNav = [
   { href: "/checkin", label: "Voice Check-in", icon: Mic },
   { href: "/medication-scan", label: "Medication Scanner", icon: Pill },
   { href: "/browse", label: "Browse Diseases", icon: Search },
-  { href: "/settings", label: "Voice Phrase", icon: ShieldCheck },
+  { href: "/settings", label: "Settings", icon: ShieldCheck },
 ];
 
 const superNav = [
@@ -40,7 +40,7 @@ const superNav = [
   { href: "/super/assign-patient", label: "Assign Patient", icon: UserPlus },
   { href: "/dashboard", label: "Doctor Dashboard", icon: LayoutDashboard },
   { href: "/checkin", label: "New Check-in", icon: Mic },
-  { href: "/settings", label: "Voice Phrase", icon: ShieldCheck },
+  { href: "/settings", label: "Settings", icon: ShieldCheck },
 ];
 
 export function Sidebar({ role }: { role: "patient" | "clinician" | "super" }) {

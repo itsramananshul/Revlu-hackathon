@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   if (!user) return errorResponse("Unauthorized", 401);
 
   const body = await request.json();
-  const { patientId, transcript, audioUrl, checkInDate, painLevel } = body;
+  const { patientId, transcript, audioUrl } = body;
   if (!patientId || !transcript)
     return errorResponse("patientId and transcript are required", 400);
 
@@ -54,8 +54,6 @@ export async function POST(request: Request) {
       patient_id: patientId,
       transcript,
       audio_url: audioUrl || null,
-      check_in_date: checkInDate || null,
-      pain_level: painLevel || null,
     })
     .select()
     .single();

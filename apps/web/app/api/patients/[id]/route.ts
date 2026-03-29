@@ -41,6 +41,9 @@ export async function PATCH(
   // Allow updating specific fields
   if (body.doctorId !== undefined) updates.doctor_id = body.doctorId;
   if (body.status !== undefined) updates.status = body.status;
+  if (body.name !== undefined) updates.name = body.name;
+  if (body.age !== undefined) updates.age = Number(body.age);
+  if (body.condition !== undefined) updates.condition = body.condition;
 
   if (Object.keys(updates).length === 0) {
     return errorResponse("No valid fields to update", 400);

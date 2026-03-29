@@ -106,10 +106,6 @@ export default function DashboardPage() {
   const [linkingPatient, setLinkingPatient] = useState(false);
   const [patientEmail, setPatientEmail] = useState("");
 
-  // ── Add Patient state ─────────────────────────────────────
-  const [showAddPatient, setShowAddPatient] = useState(false);
-  const [addingPatient, setAddingPatient] = useState(false);
-  const [newPatient, setNewPatient] = useState({ name: "", age: "", condition: "" });
 
   // ── Slide-over panel ────────────────────────────────────────
   const [slideOverOpen, setSlideOverOpen] = useState(false);
@@ -145,35 +141,6 @@ export default function DashboardPage() {
       toast.error(err instanceof Error ? err.message : "Failed to link patient");
     } finally {
       setLinkingPatient(false);
-    }
-  };
-
-  const generateTrialId = () => {
-    const num = String(patients.length + 1).padStart(3, "0");
-    return `TRIAL-VX-${num}`;
-  };
-
-  const handleAddPatient = async () => {
-    if (!newPatient.name || !newPatient.age || !newPatient.condition) {
-      toast.error("Please fill in all fields");
-      return;
-    }
-    setAddingPatient(true);
-    try {
-      await api.createPatient({
-        name: newPatient.name,
-        age: Number(newPatient.age),
-        condition: newPatient.condition,
-        trialId: generateTrialId(),
-      });
-      toast.success("Patient added successfully");
-      setShowAddPatient(false);
-      setNewPatient({ name: "", age: "", condition: "" });
-      load();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add patient");
-    } finally {
-      setAddingPatient(false);
     }
   };
 
@@ -411,13 +378,6 @@ export default function DashboardPage() {
                 Simulation active
               </span>
             )}
-            <button
-              onClick={() => setShowAddPatient(true)}
-              className="btn-secondary flex items-center gap-1.5 text-sm py-1.5 px-3"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              Add Patient
-            </button>
             <button
               onClick={() => setShowLinkPatient(true)}
               className="btn-secondary flex items-center gap-1.5 text-sm py-1.5 px-3"
@@ -694,43 +654,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </>
-      )}
-
-      {/* ── Add Patient Modal ──────────────────────────────── */}
-      {showAddPatient && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-slate-900">
-                Add New Patient
-              </h2>
-              <button
-                onClick={() => setShowAddPatient(false)}
-                className="text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-                <input type="text" value={newPatient.name} onChange={(e) => setNewPatient((p) => ({ ...p, name: e.target.value }))} className="input" placeholder="e.g. Sarah Chen" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Age</label>
-                <input type="number" value={newPatient.age} onChange={(e) => setNewPatient((p) => ({ ...p, age: e.target.value }))} className="input" placeholder="e.g. 34" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Medical Condition</label>
-                <input type="text" value={newPatient.condition} onChange={(e) => setNewPatient((p) => ({ ...p, condition: e.target.value }))} className="input" placeholder="e.g. Rheumatoid Arthritis" />
-              </div>
-              <button onClick={handleAddPatient} disabled={addingPatient} className="btn-primary w-full flex items-center justify-center gap-2 py-2.5">
-                {addingPatient ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                {addingPatient ? "Adding..." : "Add Patient"}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* ── Link Patient Modal ─────────────────────────────── */}
