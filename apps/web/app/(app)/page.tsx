@@ -58,6 +58,17 @@ export default function RoleSelectionPage() {
       data: { voxvitals_role: role },
     });
 
+    // Also update app_users.role in DB so doctors show in doctor lists
+    // DB constraint only allows 'patient' | 'clinician', so map super → clinician
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const dbRole = role === "patient" ? "patient" : "clinician";
+      await supabase
+        .from("app_users")
+        .update({ role: dbRole })
+        .eq("auth_id", user.id);
+    }
+
     const dest = role === "patient" ? "/checkin" : role === "super" ? "/super" : "/dashboard";
     router.push(dest);
   };
