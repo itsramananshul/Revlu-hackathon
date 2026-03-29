@@ -30,7 +30,7 @@ export default function RoleSelectionPage() {
           return;
         }
 
-        // Check user_metadata first (saved on role selection)
+        // Check user_metadata (saved permanently on role selection)
         const metaRole = user.user_metadata?.voxvitals_role;
         if (metaRole === "patient" || metaRole === "clinician" || metaRole === "super") {
           localStorage.setItem("voxvitals-role", metaRole);
@@ -39,20 +39,7 @@ export default function RoleSelectionPage() {
           return;
         }
 
-        // Fallback: check app_users table
-        const { data: appUser } = await supabase
-          .from("app_users")
-          .select("role")
-          .eq("auth_id", user.id)
-          .maybeSingle();
-
-        if (appUser?.role) {
-          const role = appUser.role === "patient" ? "patient" : "clinician";
-          localStorage.setItem("voxvitals-role", role);
-          const dest = role === "patient" ? "/checkin" : "/dashboard";
-          router.replace(dest);
-          return;
-        }
+        // No role saved anywhere → show selection screen
       } catch {
         // Ignore errors, fall through to manual selection
       }
