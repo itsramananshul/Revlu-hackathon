@@ -62,17 +62,27 @@ export default function SignUpPage() {
     }
 
     // Auto sign in after signup
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (signInError) {
-      // If auto-signin fails (email confirmation required), show message
       toast.info("Check your email to confirm, then sign in.");
       setLoading(false);
       setStep("done");
       return;
+    }
+
+    // Create app_users row for this user
+    if (signInData?.user) {
+      await supabase.from("app_users").upsert(
+        {
+          auth_id: signInData.user.id,
+          email: email.toLowerCase(),
+        },
+        { onConflict: "email" }
+      );
     }
 
     setLoading(false);

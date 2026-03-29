@@ -7,10 +7,10 @@ import { phraseMatches } from "@/lib/voice-verification";
  * POST /api/auth/voice-login
  *
  * 1. Receive email + audio
- * 2. Look up user_profiles by email → get stored voice_phrase
+ * 2. Look up app_users by email → get stored voice_phrase
  * 3. Transcribe audio via ElevenLabs STT
  * 4. Compare transcript with stored phrase
- * 5. If match → sign in with Supabase Auth and return session
+ * 5. If match → generate magic link to sign user in
  */
 export async function POST(request: Request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -47,21 +47,21 @@ export async function POST(request: Request) {
   // Service role client to bypass RLS
   const supabase = createClient(url, serviceKey);
 
-  // Look up voice phrase by email
-  const { data: profile, error: profileError } = await supabase
-    .from("user_profiles")
-    .select("voice_phrase, id")
+  // Look up voice phrase by email in app_users
+  const { data: appUser, error: userError } = await supabase
+    .from("app_users")
+    .select("voice_phrase, auth_id, email")
     .eq("email", email)
     .maybeSingle();
 
-  if (profileError) {
+  if (userError) {
     return NextResponse.json(
       { success: false, message: "Database error", data: null },
       { status: 500 }
     );
   }
 
-  if (!profile) {
+  if (!appUser) {
     return NextResponse.json(
       {
         success: false,
@@ -72,12 +72,12 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!profile.voice_phrase) {
+  if (!appUser.voice_phrase) {
     return NextResponse.json(
       {
         success: false,
         message:
-          "No voice phrase set for this account. Please sign in with email and set your phrase.",
+          "No voice phrase set. Please sign in with email and set your phrase first.",
         data: null,
       },
       { status: 400 }
@@ -100,13 +100,16 @@ export async function POST(request: Request) {
   try {
     const stt = new ElevenLabsSttProvider(elevenLabsKey);
     const audioBuffer = Buffer.from(await audioFile.arrayBuffer());
-    transcript = await stt.transcribe(audioBuffer, audioFile.name || "audio.webm");
+    transcript = await stt.transcribe(
+      audioBuffer,
+      audioFile.name || "audio.webm"
+    );
   } catch (err) {
     console.error("[VoiceLogin] STT error:", err);
     return NextResponse.json(
       {
         success: false,
-        message: "Could not process voice recording. Please try again or use email login.",
+        message: "Could not process recording. Please try again.",
         data: null,
       },
       { status: 500 }
@@ -114,7 +117,7 @@ export async function POST(request: Request) {
   }
 
   // Compare phrases
-  const { matches } = phraseMatches(transcript, profile.voice_phrase);
+  const { matches } = phraseMatches(transcript, appUser.voice_phrase);
 
   if (!matches) {
     return NextResponse.json(
@@ -127,10 +130,8 @@ export async function POST(request: Request) {
     );
   }
 
-  // Phrase matched — look up the user's auth credentials and generate a sign-in link
-  // Use admin API to generate a magic link or sign the user in directly
+  // Phrase matched — generate sign-in link
   try {
-    // Generate a one-time sign-in link for this user
     const { data: linkData, error: linkError } =
       await supabase.auth.admin.generateLink({
         type: "magiclink",
@@ -138,42 +139,28 @@ export async function POST(request: Request) {
       });
 
     if (linkError || !linkData) {
-      // Fallback: report verified but can't auto-sign-in without service role
       return NextResponse.json({
         success: true,
-        message: "Voice verified! Use the token to complete sign in.",
-        data: {
-          verified: true,
-          transcript,
-          token: null,
-        },
+        message: "Voice verified but auto-login unavailable. Use email login.",
+        data: { verified: true, transcript, token: null },
       });
     }
 
-    // Extract the token from the generated link
-    const token = linkData.properties?.hashed_token;
-    const redirectUrl = linkData.properties?.action_link;
-
     return NextResponse.json({
       success: true,
       message: "Voice verified",
       data: {
         verified: true,
         transcript,
-        token,
-        redirectUrl,
+        token: linkData.properties?.hashed_token,
+        redirectUrl: linkData.properties?.action_link,
       },
     });
   } catch {
-    // If admin API not available, still report success
     return NextResponse.json({
       success: true,
       message: "Voice verified",
-      data: {
-        verified: true,
-        transcript,
-        token: null,
-      },
+      data: { verified: true, transcript, token: null },
     });
   }
 }

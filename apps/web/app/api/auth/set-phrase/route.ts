@@ -3,8 +3,7 @@ import { successResponse, errorResponse } from "@/lib/api-utils";
 
 /**
  * POST /api/auth/set-phrase
- * Save voice phrase for the currently authenticated user.
- * Called after signup to set the user's verification phrase.
+ * Save voice phrase for the currently authenticated user in app_users table.
  */
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -17,17 +16,20 @@ export async function POST(request: Request) {
   const { phrase } = body;
 
   if (!phrase || typeof phrase !== "string" || phrase.trim().length < 2) {
-    return errorResponse("A voice phrase is required (at least 2 characters)", 400);
+    return errorResponse(
+      "A voice phrase is required (at least 2 characters)",
+      400
+    );
   }
 
-  // Upsert profile with voice phrase
-  const { error } = await supabase.from("user_profiles").upsert(
+  // Upsert into app_users
+  const { error } = await supabase.from("app_users").upsert(
     {
-      id: user.id,
+      auth_id: user.id,
       email: user.email!,
       voice_phrase: phrase.trim(),
     },
-    { onConflict: "id" }
+    { onConflict: "email" }
   );
 
   if (error) return errorResponse(error.message, 500);
