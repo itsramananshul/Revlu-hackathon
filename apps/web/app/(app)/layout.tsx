@@ -7,7 +7,7 @@ import { AICompanionWidget } from "@/components/AICompanionWidget";
 import { EmergencyButton } from "@/components/EmergencyButton";
 import { api } from "@/lib/api";
 
-type Role = "patient" | "clinician" | null;
+type Role = "patient" | "clinician" | "super" | null;
 
 function AppContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -49,6 +49,12 @@ function AppContent({ children }: { children: React.ReactNode }) {
       !patientAllowed.some((p) => pathname.startsWith(p))
     ) {
       router.replace("/checkin");
+    }
+
+    // Super doctor can access everything — no restrictions
+    // Regular clinician cannot access /super
+    if (role === "clinician" && pathname.startsWith("/super")) {
+      router.replace("/dashboard");
     }
   }, [ready, role, pathname, router]);
 

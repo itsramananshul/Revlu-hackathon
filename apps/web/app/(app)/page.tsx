@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Activity, Mic, Stethoscope, Loader2 } from "lucide-react";
+import { Activity, Mic, Stethoscope, Shield, Loader2 } from "lucide-react";
 
 export default function RoleSelectionPage() {
   const router = useRouter();
@@ -18,6 +18,10 @@ export default function RoleSelectionPage() {
     }
     if (savedRole === "clinician") {
       router.replace("/dashboard");
+      return;
+    }
+    if (savedRole === "super") {
+      router.replace("/super");
       return;
     }
 
@@ -40,9 +44,10 @@ export default function RoleSelectionPage() {
           .maybeSingle();
 
         if (appUser?.role) {
-          const role = appUser.role === "patient" ? "patient" : "clinician";
+          const role = appUser.role === "super" ? "super" : appUser.role === "patient" ? "patient" : "clinician";
           localStorage.setItem("voxvitals-role", role);
-          router.replace(role === "patient" ? "/checkin" : "/dashboard");
+          const dest = role === "patient" ? "/checkin" : role === "super" ? "/super" : "/dashboard";
+          router.replace(dest);
           return;
         }
       } catch {
@@ -54,9 +59,10 @@ export default function RoleSelectionPage() {
     fetchRole();
   }, [router]);
 
-  const selectRole = (role: "patient" | "clinician") => {
+  const selectRole = (role: "patient" | "clinician" | "super") => {
     localStorage.setItem("voxvitals-role", role);
-    router.push(role === "patient" ? "/checkin" : "/dashboard");
+    const dest = role === "patient" ? "/checkin" : role === "super" ? "/super" : "/dashboard";
+    router.push(dest);
   };
 
   // Show loading while checking
@@ -91,34 +97,49 @@ export default function RoleSelectionPage() {
         </p>
 
         {/* Role buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <button
             onClick={() => selectRole("patient")}
-            className="group bg-white border-2 border-slate-200 hover:border-emerald-400 rounded-2xl p-8 transition-all duration-200 hover:shadow-lg text-left"
+            className="group bg-white border-2 border-slate-200 hover:border-emerald-400 rounded-2xl p-6 transition-all duration-200 hover:shadow-lg text-left"
           >
             <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Mic className="w-6 h-6 text-emerald-600" />
             </div>
             <h2 className="text-lg font-bold text-slate-900 mb-1">
-              I am a Patient
+              Patient
             </h2>
             <p className="text-sm text-slate-500">
-              Submit a voice check-in about how you're feeling
+              Daily check-ins &amp; symptom reporting
             </p>
           </button>
 
           <button
             onClick={() => selectRole("clinician")}
-            className="group bg-white border-2 border-slate-200 hover:border-primary-400 rounded-2xl p-8 transition-all duration-200 hover:shadow-lg text-left"
+            className="group bg-white border-2 border-slate-200 hover:border-primary-400 rounded-2xl p-6 transition-all duration-200 hover:shadow-lg text-left"
           >
             <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Stethoscope className="w-6 h-6 text-primary-600" />
             </div>
             <h2 className="text-lg font-bold text-slate-900 mb-1">
-              I am a Doctor
+              Doctor
             </h2>
             <p className="text-sm text-slate-500">
-              Monitor patients, view alerts, and track risk
+              Monitor patients, alerts &amp; risk
+            </p>
+          </button>
+
+          <button
+            onClick={() => selectRole("super")}
+            className="group bg-white border-2 border-slate-200 hover:border-purple-400 rounded-2xl p-6 transition-all duration-200 hover:shadow-lg text-left"
+          >
+            <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <Shield className="w-6 h-6 text-purple-600" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-900 mb-1">
+              Super Doctor
+            </h2>
+            <p className="text-sm text-slate-500">
+              Oversee all doctors &amp; trial analytics
             </p>
           </button>
         </div>

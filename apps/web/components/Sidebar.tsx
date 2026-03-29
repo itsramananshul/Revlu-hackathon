@@ -16,6 +16,8 @@ import {
   Heart,
   ShieldCheck,
   Pill,
+  Shield,
+  BarChart3,
 } from "lucide-react";
 
 const clinicianNav = [
@@ -30,13 +32,20 @@ const patientNav = [
   { href: "/settings", label: "Voice Phrase", icon: ShieldCheck },
 ];
 
-export function Sidebar({ role }: { role: "patient" | "clinician" }) {
+const superNav = [
+  { href: "/super", label: "Command Center", icon: Shield },
+  { href: "/dashboard", label: "Doctor Dashboard", icon: LayoutDashboard },
+  { href: "/checkin", label: "New Check-in", icon: Mic },
+  { href: "/settings", label: "Voice Phrase", icon: ShieldCheck },
+];
+
+export function Sidebar({ role }: { role: "patient" | "clinician" | "super" }) {
   const pathname = usePathname();
   const router = useRouter();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const navItems = role === "patient" ? patientNav : clinicianNav;
+  const navItems = role === "patient" ? patientNav : role === "super" ? superNav : clinicianNav;
 
   useEffect(() => {
     const supabase = createClient();
@@ -66,7 +75,7 @@ export function Sidebar({ role }: { role: "patient" | "clinician" }) {
               VoxVitals
             </h1>
             <p className="text-[11px] text-clinical-muted font-medium uppercase tracking-wider">
-              {role === "patient" ? "Patient Portal" : "Doctor Dashboard"}
+              {role === "patient" ? "Patient Portal" : role === "super" ? "Command Center" : "Doctor Dashboard"}
             </p>
           </div>
         </div>
@@ -78,15 +87,19 @@ export function Sidebar({ role }: { role: "patient" | "clinician" }) {
           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold ${
             role === "patient"
               ? "bg-emerald-50 text-emerald-700"
-              : "bg-primary-50 text-primary-700"
+              : role === "super"
+                ? "bg-purple-50 text-purple-700"
+                : "bg-primary-50 text-primary-700"
           }`}
         >
           {role === "patient" ? (
             <Heart className="w-3.5 h-3.5" />
+          ) : role === "super" ? (
+            <Shield className="w-3.5 h-3.5" />
           ) : (
             <Users className="w-3.5 h-3.5" />
           )}
-          {role === "patient" ? "Patient Mode" : "Doctor Mode"}
+          {role === "patient" ? "Patient Mode" : role === "super" ? "Super Doctor" : "Doctor Mode"}
         </div>
       </div>
 
