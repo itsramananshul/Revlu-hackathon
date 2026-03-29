@@ -14,15 +14,18 @@ import {
   X,
   Users,
   Heart,
+  ShieldCheck,
 } from "lucide-react";
 
 const clinicianNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/checkin", label: "New Check-in", icon: Mic },
+  { href: "/settings", label: "Voice Phrase", icon: ShieldCheck },
 ];
 
 const patientNav = [
   { href: "/checkin", label: "Voice Check-in", icon: Mic },
+  { href: "/settings", label: "Voice Phrase", icon: ShieldCheck },
 ];
 
 export function Sidebar({ role }: { role: "patient" | "clinician" }) {

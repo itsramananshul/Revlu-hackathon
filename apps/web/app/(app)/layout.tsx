@@ -28,9 +28,11 @@ function AppContent({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Patient can only access /checkin and /settings
+    const patientAllowed = ["/checkin", "/settings"];
     if (
       role === "patient" &&
-      (pathname === "/dashboard" || pathname.startsWith("/patient/"))
+      !patientAllowed.some((p) => pathname.startsWith(p))
     ) {
       router.replace("/checkin");
     }
