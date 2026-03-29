@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
+import { AICompanionWidget } from "@/components/AICompanionWidget";
 
 type Role = "patient" | "clinician" | null;
 
@@ -60,6 +61,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen bg-clinical-bg">
       <Sidebar role={role} />
       <main className="flex-1 md:ml-64 p-4 md:p-8">{children}</main>
+      {role === "patient" && <AICompanionWidget patient={null} />}
     </div>
   );
 }
