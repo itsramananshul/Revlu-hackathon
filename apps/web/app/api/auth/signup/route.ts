@@ -63,6 +63,7 @@ export async function POST(request: Request) {
       email: email.toLowerCase(),
       password,
       email_confirm: true, // Auto-confirm so they can sign in immediately
+      user_metadata: { full_name: name || undefined },
     });
 
     if (error) {

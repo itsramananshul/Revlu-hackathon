@@ -54,7 +54,14 @@ export function Sidebar({ role }: { role: "patient" | "clinician" | "super" }) {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
 
-      // For patient role, try to get their patient name
+      // 1. Check auth user_metadata for full_name (set during signup)
+      const metaName = user.user_metadata?.full_name;
+      if (metaName && metaName.trim()) {
+        setDisplayName(metaName.trim());
+        return;
+      }
+
+      // 2. For patient role, try to get their patient name from DB
       if (role === "patient") {
         const { data: patients } = await supabase
           .from("patients")
@@ -67,7 +74,7 @@ export function Sidebar({ role }: { role: "patient" | "clinician" | "super" }) {
         }
       }
 
-      // Fallback: derive name from email (e.g. "ar.dev@..." → "Ar Dev")
+      // 3. Fallback: derive name from email (e.g. "ar.dev@..." → "Ar Dev")
       const local = (user.email ?? "").split("@")[0];
       const name = local
         .replace(/[._-]/g, " ")
