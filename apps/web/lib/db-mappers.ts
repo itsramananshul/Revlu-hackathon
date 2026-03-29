@@ -54,7 +54,7 @@ export function mapAlert(row: any): Alert {
   return {
     id: row.id,
     patientId: row.patient_id,
-    checkInId: row.check_in_id,
+    checkInId: row.check_in_id ?? "",
     type: row.type,
     severity: row.severity,
     message: row.message,

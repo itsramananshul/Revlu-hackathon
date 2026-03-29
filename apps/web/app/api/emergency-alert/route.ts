@@ -37,12 +37,11 @@ export async function POST(request: Request) {
     ? `Emergency alert triggered by patient: ${note.trim()}`
     : "Emergency alert triggered by patient — immediate attention required.";
 
-  // Insert emergency alert
+  // Insert emergency alert (check_in_id is null — not linked to a check-in)
   const { data, error } = await supabase
     .from("alerts")
     .insert({
       patient_id: patientId,
-      check_in_id: "manual-emergency",
       type: "emergency",
       severity: "critical",
       message,
