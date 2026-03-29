@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import type {
   Patient,
@@ -9,14 +9,17 @@ import type {
   CheckIn,
 } from "@trialpulse/types";
 import { api } from "@/lib/api";
+import { rankPatientsByRisk } from "@/lib/risk-scoring";
 import { PatientStatusBadge, SeverityBadge } from "@/components/StatusBadge";
 import { DropoutRiskBar } from "@/components/DropoutRiskBar";
+import { HighRiskPatientCard } from "@/components/HighRiskPatientCard";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
 import {
   StatCardSkeleton,
   PatientCardSkeleton,
   AlertSkeleton,
+  HighRiskCardSkeleton,
 } from "@/components/Skeleton";
 import { toast } from "sonner";
 import {
@@ -25,12 +28,13 @@ import {
   TrendingUp,
   Bell,
   ChevronRight,
-  Shield,
-  UserX,
+  Flame,
   Mic,
   UserPlus,
   X,
   Loader2,
+  ShieldCheck,
+  Activity,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -112,9 +116,30 @@ export default function DashboardPage() {
     }
   };
 
-  if (error) {
-    return <ErrorState message={error} onRetry={load} />;
-  }
+  // ── Risk scoring ──────────────────────────────────────────
+
+  const rankedPatients = useMemo(
+    () => rankPatientsByRisk(patients, checkins, alerts),
+    [patients, checkins, alerts]
+  );
+
+  const topFive = rankedPatients.slice(0, 5);
+
+  const highRiskCount = rankedPatients.filter(
+    (r) => r.riskTier === "critical" || r.riskTier === "high"
+  ).length;
+
+  const emergencyCount = rankedPatients.filter(
+    (r) => r.riskTier === "critical"
+  ).length;
+
+  const checkinsToday = checkins.filter((c) => {
+    const d = new Date(c.timestamp);
+    const now = new Date();
+    return d.toDateString() === now.toDateString();
+  }).length;
+
+  // ── Legacy helper for "All Patients" grid ─────────────────
 
   const getLatestAnalysis = (patientId: string) => {
     const patientCheckins = checkins.filter(
@@ -123,17 +148,23 @@ export default function DashboardPage() {
     return patientCheckins[patientCheckins.length - 1]?.analysis;
   };
 
+  // ── Render ────────────────────────────────────────────────
+
+  if (error) {
+    return <ErrorState message={error} onRetry={load} />;
+  }
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Dashboard
+            Clinical Dashboard
           </h1>
           <p className="section-subtitle mt-0.5">
-          Clinical trial monitoring overview
-        </p>
+            Patient risk monitoring &amp; triage overview
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -226,7 +257,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Stats Grid */}
+      {/* ── Stats Grid (risk-aware) ──────────────────────── */}
       {loading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -234,37 +265,35 @@ export default function DashboardPage() {
           ))}
         </div>
       ) : (
-        summary && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <StatCard
-              icon={<Users className="w-5 h-5" />}
-              label="Total Patients"
-              value={summary.totalPatients}
-              accent="bg-primary-50 text-primary-600"
-            />
-            <StatCard
-              icon={<Shield className="w-5 h-5" />}
-              label="Active"
-              value={summary.activePatients}
-              accent="bg-emerald-50 text-emerald-600"
-            />
-            <StatCard
-              icon={<UserX className="w-5 h-5" />}
-              label="Flagged"
-              value={summary.flaggedPatients}
-              accent="bg-red-50 text-red-600"
-            />
-            <StatCard
-              icon={<Bell className="w-5 h-5" />}
-              label="Active Alerts"
-              value={summary.recentAlerts}
-              accent="bg-amber-50 text-amber-600"
-            />
-          </div>
-        )
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatCard
+            icon={<Users className="w-5 h-5" />}
+            label="Patients Monitored"
+            value={patients.length}
+            accent="bg-primary-50 text-primary-600"
+          />
+          <StatCard
+            icon={<AlertTriangle className="w-5 h-5" />}
+            label="High Risk"
+            value={highRiskCount}
+            accent="bg-amber-50 text-amber-600"
+          />
+          <StatCard
+            icon={<Flame className="w-5 h-5" />}
+            label="Emergencies"
+            value={emergencyCount}
+            accent="bg-red-50 text-red-600"
+          />
+          <StatCard
+            icon={<Activity className="w-5 h-5" />}
+            label="Check-ins Today"
+            value={checkinsToday}
+            accent="bg-emerald-50 text-emerald-600"
+          />
+        </div>
       )}
 
-      {/* Alerts Section */}
+      {/* ── Active Alerts ────────────────────────────────── */}
       {loading ? (
         <div className="card space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -275,7 +304,7 @@ export default function DashboardPage() {
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="section-title flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-red-500" />
+              <Bell className="w-5 h-5 text-red-500" />
               Active Alerts
             </h2>
             <span className="badge-danger">{alerts.length}</span>
@@ -326,9 +355,56 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      {/* Patient Cards */}
+      {/* ── High-Risk Patients (Top 5) ───────────────────── */}
       <div>
-        <h2 className="section-title mb-3">Patients</h2>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="section-title flex items-center gap-2">
+              <Flame className="w-5 h-5 text-red-500" />
+              High-Risk Patients
+            </h2>
+            <p className="section-subtitle mt-0.5">
+              Top 5 patients requiring immediate attention, ranked by urgency
+            </p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <HighRiskCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : patients.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No patients enrolled"
+            description="Patients will appear here once they are added to a trial."
+          />
+        ) : topFive.every((r) => r.riskTier === "low") ? (
+          <div className="card">
+            <EmptyState
+              icon={ShieldCheck}
+              title="All patients stable"
+              description="No high-risk patients detected. All patients are within safe parameters."
+            />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {topFive.map((scored, i) => (
+              <HighRiskPatientCard
+                key={scored.patient.id}
+                scoredPatient={scored}
+                rank={i + 1}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── All Patients Grid ────────────────────────────── */}
+      <div>
+        <h2 className="section-title mb-3">All Patients</h2>
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -390,7 +466,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Trends */}
+      {/* ── Symptom Trends ───────────────────────────────── */}
       {!loading && summary && summary.symptomTrends.length > 0 && (
         <div className="card">
           <h2 className="section-title flex items-center gap-2 mb-4">

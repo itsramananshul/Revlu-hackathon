@@ -41,6 +41,33 @@ export function PatientCardSkeleton() {
   );
 }
 
+export function HighRiskCardSkeleton() {
+  return (
+    <div className="card border-l-4 border-l-slate-200 space-y-3">
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-8 h-8 rounded-full" />
+        <Skeleton className="w-9 h-9 rounded-full" />
+        <div className="flex-1 space-y-1.5">
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="h-3 w-48" />
+        </div>
+        <Skeleton className="h-4 w-8" />
+      </div>
+      <div className="flex gap-2 ml-11">
+        <Skeleton className="h-5 w-24 rounded-full" />
+        <Skeleton className="h-5 w-20 rounded-full" />
+      </div>
+      <div className="ml-11 flex items-center gap-4">
+        <div className="flex-1 max-w-xs space-y-1">
+          <Skeleton className="h-2.5 w-16" />
+          <Skeleton className="h-2 w-full rounded-full" />
+        </div>
+        <Skeleton className="h-3 w-24" />
+      </div>
+    </div>
+  );
+}
+
 export function AlertSkeleton() {
   return (
     <div className="flex items-start gap-4 p-3 rounded-lg bg-slate-50 border border-slate-100">
