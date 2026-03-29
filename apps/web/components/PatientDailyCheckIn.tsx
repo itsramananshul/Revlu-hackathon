@@ -254,6 +254,9 @@ export function PatientDailyCheckIn({
             .from("checkin-audio")
             .getPublicUrl(data.path);
           audioUrl = urlData.publicUrl;
+        } else if (error) {
+          console.warn("[CheckIn] Audio upload failed:", error.message);
+          toast.error("Audio upload failed — submitting without recording");
         }
       }
 

@@ -34,5 +34,11 @@ export async function POST(request: Request) {
 
   if (error) return errorResponse(error.message, 500);
 
+  // Also sync to patients table so voice verification can find it
+  await supabase
+    .from("patients")
+    .update({ voice_phrase: phrase.trim() })
+    .eq("user_id", user.id);
+
   return successResponse({ saved: true }, "Voice phrase saved");
 }

@@ -518,14 +518,14 @@ function DoctorPerformanceTab({ doctors }: { doctors: Doctor[] }) {
               <div className="flex justify-between text-[10px] mb-1">
                 <span className="text-clinical-muted">Performance Score</span>
                 <span className="font-bold text-slate-700">
-                  {Math.round(
+                  {Math.max(0, Math.min(100, Math.round(
                     100 -
                       doc.dropoutRate * 2 -
                       doc.unresolvedAlerts * 5 -
                       (Number(doc.avgResponseTime.replace(" min", "")) > 20
                         ? 15
                         : 0)
-                  )}
+                  )))}
                   %
                 </span>
               </div>
@@ -537,7 +537,7 @@ function DoctorPerformanceTab({ doctors }: { doctors: Doctor[] }) {
                       : "bg-emerald-500"
                   }`}
                   style={{
-                    width: `${Math.round(100 - doc.dropoutRate * 2 - doc.unresolvedAlerts * 5)}%`,
+                    width: `${Math.max(0, Math.min(100, Math.round(100 - doc.dropoutRate * 2 - doc.unresolvedAlerts * 5)))}%`,
                   }}
                 />
               </div>

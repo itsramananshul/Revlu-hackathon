@@ -9,6 +9,7 @@ import { VoiceVerification } from "@/components/VoiceVerification";
 import { PatientDailyCheckIn } from "@/components/PatientDailyCheckIn";
 import { PassiveMonitor } from "@/components/PassiveMonitor";
 import { toast } from "sonner";
+import { recordAuditEvent } from "@/lib/security/audit";
 import {
   Mic,
   MicOff,
@@ -175,6 +176,9 @@ export default function CheckInPage() {
             .from("checkin-audio")
             .getPublicUrl(data.path);
           audioUrl = urlData.publicUrl;
+        } else if (error) {
+          console.warn("[CheckIn] Audio upload failed:", error.message);
+          toast.error("Audio upload failed — submitting without recording");
         }
       }
 
@@ -237,7 +241,7 @@ export default function CheckInPage() {
         <div className="mt-6">
           {role === "clinician" ? (
             <button
-              onClick={() => router.push("/dashboard")}
+              onClick={() => { window.location.href = "/dashboard"; }}
               className="btn-primary px-8 py-3 text-base"
             >
               View Dashboard
@@ -310,13 +314,20 @@ export default function CheckInPage() {
       {selectedPatient && !voiceVerified && (
         <VoiceVerification
           patientId={selectedPatient}
-          onVerified={() => setVoiceVerified(true)}
-          onSkip={() => setVoiceVerified(true)}
+          onVerified={() => {
+            setVoiceVerified(true);
+            recordAuditEvent("voice_verification_passed", { patientId: selectedPatient });
+          }}
+          onSkip={() => {
+            setVoiceVerified(true);
+            recordAuditEvent("voice_verification_skipped", { patientId: selectedPatient });
+            toast.warning("Voice verification skipped — proceeding without identity check");
+          }}
         />
       )}
 
       {/* Voice Recording — only shown after verification */}
-      {(!selectedPatient || voiceVerified) && (
+      {(selectedPatient && voiceVerified) && (
       <>
 
       {/* Voice Recording */}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import { Camera, Upload, X, Loader2, Pill, ShieldCheck, ShieldAlert, Eye } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Camera, Upload, X, Loader2, Pill, ShieldCheck, ShieldAlert, Eye, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 interface MedicationMetadata {
@@ -26,9 +26,19 @@ export function MedicationScanner() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [yoloDown, setYoloDown] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    fetch("/api/ai/status")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data?.yolo === "unavailable") setYoloDown(true);
+      })
+      .catch(() => {});
+  }, []);
 
   const processImage = useCallback(async (base64: string, mimeType: string) => {
     setScanning(true);
@@ -124,6 +134,13 @@ export function MedicationScanner() {
         <Pill className="w-5 h-5 text-emerald-600" />
         Medication Scanner
       </h2>
+
+      {yoloDown && (
+        <div className="flex items-center gap-2 px-3 py-2 mb-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          <span>YOLO detection service is offline — scanner will use full-image fallback.</span>
+        </div>
+      )}
 
       {/* Camera View */}
       {showCamera && (

@@ -14,15 +14,13 @@ import { phraseMatches } from "@/lib/voice-verification";
  */
 export async function POST(request: Request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const elevenLabsKey = process.env.ELEVENLABS_API_KEY;
 
   if (!url || !serviceKey) {
     return NextResponse.json(
-      { success: false, message: "Server configuration error", data: null },
-      { status: 500 }
+      { success: false, message: "Voice login is not configured. Please use email login.", data: null },
+      { status: 503 }
     );
   }
 

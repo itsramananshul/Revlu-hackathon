@@ -119,6 +119,8 @@ export async function POST(
   }
 
   let createdAlerts: any[] = [];
+  let warnings: string[] = [];
+
   if (alertsToCreate.length > 0) {
     const { data: alerts, error: alertError } = await supabase
       .from("alerts")
@@ -127,6 +129,7 @@ export async function POST(
 
     if (alertError) {
       console.error("[Pipeline] Alert creation failed:", alertError.message);
+      warnings.push("Alerts could not be created");
     } else {
       createdAlerts = alerts || [];
     }
@@ -139,19 +142,28 @@ export async function POST(
   }
 
   if (newStatus) {
-    await supabase
+    const { error: statusError } = await supabase
       .from("patients")
       .update({ status: newStatus })
       .eq("id", checkIn.patient_id);
+
+    if (statusError) {
+      console.error("[Pipeline] Patient status update failed:", statusError.message);
+      warnings.push("Patient status could not be updated");
+    }
   }
 
   // 6. Return complete result
+  const message = warnings.length > 0
+    ? `Analysis complete (warnings: ${warnings.join("; ")})`
+    : "Analysis complete";
+
   return successResponse(
     {
       analysis: mapAnalysis(savedAnalysis),
       alerts: createdAlerts.map(mapAlert),
       patientStatusUpdated: newStatus,
     },
-    "Analysis complete"
+    message
   );
 }
