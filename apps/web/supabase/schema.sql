@@ -50,10 +50,11 @@ create table ai_analyses (
 create table alerts (
   id uuid primary key default uuid_generate_v4(),
   patient_id uuid not null references patients(id) on delete cascade,
-  check_in_id uuid not null references check_ins(id) on delete cascade,
+  check_in_id uuid references check_ins(id) on delete cascade,
   type text not null
     check (type in ('adverse_event', 'high_dropout_risk',
-                     'medication_nonadherence', 'symptom_escalation')),
+                     'medication_nonadherence', 'symptom_escalation',
+                     'emergency')),
   severity text not null
     check (severity in ('low', 'medium', 'high', 'critical')),
   message text not null,
