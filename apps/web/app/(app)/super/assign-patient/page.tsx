@@ -3,14 +3,20 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Patient } from "@trialpulse/types";
 import { api } from "@/lib/api";
-import { MOCK_DOCTORS, type Doctor } from "@/data/mock-doctors";
+
+// Doctor type from API
+interface Doctor {
+  id: string;
+  name: string;
+  email: string;
+  authId: string | null;
+}
 import { toast } from "sonner";
 import {
   UserPlus,
   Search,
   User,
   Mail,
-  Phone,
   Calendar,
   Stethoscope,
   Heart,
@@ -22,12 +28,6 @@ import {
 } from "lucide-react";
 
 // ── Status badge colors ──────────────────────────────────────
-
-const doctorStatusStyle: Record<string, string> = {
-  active: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  busy: "bg-amber-50 text-amber-700 ring-amber-200",
-  offline: "bg-slate-100 text-slate-500 ring-slate-200",
-};
 
 const patientStatusStyle: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 ring-emerald-200",
@@ -139,28 +139,13 @@ function DoctorProfileCard({ doctor }: { doctor: Doctor }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="text-base font-bold text-slate-900 truncate">{doctor.name}</h3>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ring-1 ${doctorStatusStyle[doctor.status]}`}>
-              {doctor.status}
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ring-1 bg-emerald-50 text-emerald-700 ring-emerald-200">
+              Clinician
             </span>
           </div>
-          <p className="text-sm text-primary-600 font-medium mb-3">{doctor.specialty}</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <span>Age {doctor.age}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <User className="w-3.5 h-3.5 text-slate-400" />
-              <span>{doctor.patientCount} patients</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Mail className="w-3.5 h-3.5 text-slate-400" />
-              <span className="truncate">{doctor.email}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Phone className="w-3.5 h-3.5 text-slate-400" />
-              <span>{doctor.phone}</span>
-            </div>
+          <div className="flex items-center gap-2 text-sm text-slate-600 mt-2">
+            <Mail className="w-3.5 h-3.5 text-slate-400" />
+            <span className="truncate">{doctor.email}</span>
           </div>
         </div>
       </div>
@@ -215,6 +200,7 @@ function PatientProfileCard({
 // ── Main Page ────────────────────────────────────────────────
 
 export default function AssignPatientPage() {
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState(false);
@@ -225,10 +211,14 @@ export default function AssignPatientPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const p = await api.getPatients();
+      const [p, docRes] = await Promise.all([
+        api.getPatients(),
+        fetch("/api/doctors").then((r) => r.json()),
+      ]);
       setPatients(p);
+      if (docRes.success) setDoctors(docRes.data);
     } catch {
-      toast.error("Failed to load patients");
+      toast.error("Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -244,7 +234,7 @@ export default function AssignPatientPage() {
     : {};
   const assignedDoctorName = selectedPatient
     ? assignments[selectedPatient.id]?.doctorName ||
-      MOCK_DOCTORS.find((d) => d.id === selectedPatient.doctorId)?.name
+      doctors.find((d) => d.id === selectedPatient.doctorId)?.name
     : undefined;
 
   const handleAssign = async () => {
@@ -304,7 +294,7 @@ export default function AssignPatientPage() {
             </h2>
           </div>
           <SearchableDropdown
-            items={MOCK_DOCTORS}
+            items={doctors}
             placeholder="Search doctor..."
             selected={selectedDoctor}
             onSelect={setSelectedDoctor}
@@ -315,7 +305,7 @@ export default function AssignPatientPage() {
                 </div>
                 <div>
                   <div className="text-sm font-medium text-slate-900">{doc.name}</div>
-                  <div className="text-xs text-clinical-muted">{doc.specialty}</div>
+                  <div className="text-xs text-clinical-muted">{doc.email}</div>
                 </div>
               </>
             )}
