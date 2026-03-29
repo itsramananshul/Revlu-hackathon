@@ -89,6 +89,6 @@ packages/
 4. Add environment variables
 5. Deploy
 
-## Mock Mode
+# Mock Mode
 
 Without AI API keys, the app uses mock providers that simulate analysis using keyword-based heuristics. The data contract is identical — same response shapes, same UI behavior.
