@@ -60,6 +60,38 @@ function sequenceMatchRatio(a: string, b: string): number {
   return (2.0 * lcs) / (len1 + len2);
 }
 
+// --- YOLOv8 Box Detection via Python Service ---
+
+const YOLO_SERVICE_URL = process.env.YOLO_SERVICE_URL || "http://localhost:8123";
+
+interface DetectedBox {
+  image: string; // base64 cropped region
+  confidence: number;
+  bbox: number[];
+}
+
+async function detectBoxes(base64Image: string): Promise<DetectedBox[]> {
+  try {
+    const response = await fetch(`${YOLO_SERVICE_URL}/detect`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64Image }),
+    });
+
+    if (!response.ok) {
+      console.warn(`[YOLO] Detection service error: ${response.status}`);
+      return [];
+    }
+
+    const result: { boxes: DetectedBox[]; total: number } = await response.json();
+    console.log(`[YOLO] Detected ${result.total} box(es)`);
+    return result.boxes;
+  } catch (err) {
+    console.warn(`[YOLO] Service unavailable, falling back to full image. Error: ${err}`);
+    return [];
+  }
+}
+
 // --- OCR via Gemini Vision ---
 
 async function extractTextFromImage(
@@ -322,9 +354,29 @@ export async function scanMedication(
     throw new Error("GEMINI_API_KEY is not configured");
   }
 
-  // Step 1: OCR via Gemini Vision
-  console.log("[MED-SCAN] Step 1: Extracting text from image...");
-  const ocrTexts = await extractTextFromImage(base64Image, mimeType, apiKey);
+  // Step 1: YOLOv8 Detection + OCR via Gemini Vision
+  console.log("[MED-SCAN] Step 1a: Detecting medication boxes with YOLOv8...");
+  const detectedBoxes = await detectBoxes(base64Image);
+
+  let ocrTexts: string[];
+
+  if (detectedBoxes.length > 0) {
+    // YOLOv8 found boxes: OCR each cropped region
+    console.log(`[MED-SCAN] Step 1b: Running OCR on ${detectedBoxes.length} detected region(s)...`);
+    const ocrPromises = detectedBoxes.map((box) =>
+      extractTextFromImage(box.image, "image/jpeg", apiKey).catch((err) => {
+        console.warn(`[MED-SCAN] OCR failed for box [${box.bbox}]: ${err}`);
+        return [] as string[];
+      })
+    );
+    const ocrResults = await Promise.all(ocrPromises);
+    ocrTexts = ocrResults.flat();
+  } else {
+    // Fallback: no YOLO service or no detections — OCR full image
+    console.log("[MED-SCAN] Step 1b: No YOLO boxes, OCR-ing full image (fallback)...");
+    ocrTexts = await extractTextFromImage(base64Image, mimeType, apiKey);
+  }
+
   console.log(`[MED-SCAN] OCR found ${ocrTexts.length} text segments`);
 
   // Step 2: RAG - Match against FDA database
