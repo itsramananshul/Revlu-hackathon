@@ -1,6 +1,7 @@
 import type { RiskScoredPatient, RiskTier } from "@/lib/risk-scoring";
 import { PatientStatusBadge } from "@/components/StatusBadge";
 import { InsightChip } from "@/components/InsightChip";
+import { SyntheticBadge } from "@/components/SimulationPanel";
 import { User } from "lucide-react";
 
 // ── Tier visual mapping ──────────────────────────────────────
@@ -32,11 +33,13 @@ export function HighRiskPatientCard({
   scoredPatient,
   rank,
   isSelected = false,
+  isSynthetic = false,
   onClick,
 }: {
   scoredPatient: RiskScoredPatient;
   rank: number;
   isSelected?: boolean;
+  isSynthetic?: boolean;
   onClick?: () => void;
 }) {
   const { patient, riskTier, insightChips, compositeScore } = scoredPatient;
@@ -74,6 +77,7 @@ export function HighRiskPatientCard({
               {patient.name}
             </h3>
             <PatientStatusBadge status={patient.status} />
+            {isSynthetic && <SyntheticBadge />}
           </div>
           <p className="text-[11px] text-clinical-muted truncate">
             {patient.condition} &middot; Age {patient.age}

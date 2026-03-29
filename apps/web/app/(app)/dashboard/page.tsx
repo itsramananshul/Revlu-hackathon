@@ -12,6 +12,8 @@ import { api } from "@/lib/api";
 import { rankPatientsByRisk, type RiskScoredPatient } from "@/lib/risk-scoring";
 import { generateSmartAlerts } from "@/lib/alert-engine";
 import { computeCohortMetrics } from "@/lib/cohort-analytics";
+import { generateSyntheticData, type SyntheticData } from "@/lib/simulation/scenarios";
+import { recordAuditEvent } from "@/lib/security/audit";
 import { HighRiskPatientCard } from "@/components/HighRiskPatientCard";
 import {
   PatientDetailPanel,
@@ -19,6 +21,7 @@ import {
 } from "@/components/PatientDetailPanel";
 import { SmartAlertBar } from "@/components/SmartAlertBar";
 import { CohortInsightsPanel } from "@/components/CohortInsightsPanel";
+import { SimulationPanel, SyntheticBadge } from "@/components/SimulationPanel";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
 import { HighRiskCardSkeleton, Skeleton } from "@/components/Skeleton";
@@ -34,9 +37,12 @@ import {
   Activity,
   User,
   BarChart3,
+  FlaskConical,
+  Shield,
+  Lock,
 } from "lucide-react";
 
-type RightPanelView = "patient" | "cohort";
+type RightPanelView = "patient" | "cohort" | "simulation";
 
 export default function DashboardPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -45,17 +51,15 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
-    null
-  );
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [rightPanel, setRightPanel] = useState<RightPanelView>("patient");
   const [showAddPatient, setShowAddPatient] = useState(false);
   const [addingPatient, setAddingPatient] = useState(false);
-  const [newPatient, setNewPatient] = useState({
-    name: "",
-    age: "",
-    condition: "",
-  });
+  const [newPatient, setNewPatient] = useState({ name: "", age: "", condition: "" });
+
+  // ── Simulation state ──────────────────────────────────────
+  const [syntheticData, setSyntheticData] = useState<SyntheticData | null>(null);
+  const [activeScenarios, setActiveScenarios] = useState<string[]>([]);
 
   // ── Data loading ──────────────────────────────────────────
 
@@ -82,9 +86,7 @@ export default function DashboardPage() {
       setNewPatient({ name: "", age: "", condition: "" });
       load();
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to add patient"
-      );
+      toast.error(err instanceof Error ? err.message : "Failed to add patient");
     } finally {
       setAddingPatient(false);
     }
@@ -104,6 +106,7 @@ export default function DashboardPage() {
       setAlerts(a);
       setCheckins(c);
       setSummary(s);
+      recordAuditEvent("dashboard_accessed");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally {
@@ -119,17 +122,42 @@ export default function DashboardPage() {
     try {
       await api.acknowledgeAlert(alertId);
       setAlerts((prev) => prev.filter((a) => a.id !== alertId));
+      recordAuditEvent("alert_acknowledged", { metadata: { alertId } });
       toast.success("Alert acknowledged");
     } catch {
       toast.error("Failed to acknowledge alert");
     }
   };
 
-  // ── Risk scoring ──────────────────────────────────────────
+  // ── Merge real + synthetic data ───────────────────────────
+
+  const mergedPatients = useMemo(() => {
+    if (!syntheticData) return patients;
+    return [...patients, ...syntheticData.patients];
+  }, [patients, syntheticData]);
+
+  const mergedCheckins = useMemo(() => {
+    if (!syntheticData) return checkins;
+    return [...checkins, ...syntheticData.checkins];
+  }, [checkins, syntheticData]);
+
+  const mergedAlerts = useMemo(() => {
+    if (!syntheticData) return alerts;
+    return [...alerts, ...syntheticData.alerts];
+  }, [alerts, syntheticData]);
+
+  // ── Synthetic patient ID set (for badge display) ──────────
+
+  const syntheticPatientIds = useMemo(
+    () => new Set(syntheticData?.patients.map((p) => p.id) ?? []),
+    [syntheticData]
+  );
+
+  // ── Risk scoring (on merged data) ─────────────────────────
 
   const rankedPatients = useMemo(
-    () => rankPatientsByRisk(patients, checkins, alerts),
-    [patients, checkins, alerts]
+    () => rankPatientsByRisk(mergedPatients, mergedCheckins, mergedAlerts),
+    [mergedPatients, mergedCheckins, mergedAlerts]
   );
 
   const highRiskCount = rankedPatients.filter(
@@ -140,7 +168,7 @@ export default function DashboardPage() {
     (r) => r.riskTier === "critical"
   ).length;
 
-  const checkinsToday = checkins.filter((c) => {
+  const checkinsToday = mergedCheckins.filter((c) => {
     const d = new Date(c.timestamp);
     const now = new Date();
     return d.toDateString() === now.toDateString();
@@ -149,15 +177,15 @@ export default function DashboardPage() {
   // ── Smart alerts ──────────────────────────────────────────
 
   const smartAlerts = useMemo(
-    () => generateSmartAlerts(patients, checkins, alerts),
-    [patients, checkins, alerts]
+    () => generateSmartAlerts(mergedPatients, mergedCheckins, mergedAlerts),
+    [mergedPatients, mergedCheckins, mergedAlerts]
   );
 
   // ── Cohort metrics ────────────────────────────────────────
 
   const cohortMetrics = useMemo(
-    () => computeCohortMetrics(patients, checkins, rankedPatients),
-    [patients, checkins, rankedPatients]
+    () => computeCohortMetrics(mergedPatients, mergedCheckins, rankedPatients),
+    [mergedPatients, mergedCheckins, rankedPatients]
   );
 
   // ── Auto-select first patient ─────────────────────────────
@@ -177,6 +205,26 @@ export default function DashboardPage() {
   const handleSelectPatient = (patientId: string) => {
     setSelectedPatientId(patientId);
     setRightPanel("patient");
+    recordAuditEvent("patient_record_viewed", { patientId });
+  };
+
+  const handleGenerateSimulation = (scenarioIds: string[]) => {
+    const data = generateSyntheticData(scenarioIds);
+    setSyntheticData(data);
+    setActiveScenarios(scenarioIds);
+    setSelectedPatientId(null); // Reset selection so it picks highest risk
+    recordAuditEvent("simulation_generated", {
+      metadata: { scenarios: scenarioIds.length },
+    });
+    toast.success(`${data.patients.length} synthetic patients generated`);
+  };
+
+  const handleResetSimulation = () => {
+    setSyntheticData(null);
+    setActiveScenarios([]);
+    setSelectedPatientId(null);
+    recordAuditEvent("simulation_cleared");
+    toast.success("Simulation data cleared");
   };
 
   // ── Error state ───────────────────────────────────────────
@@ -197,11 +245,23 @@ export default function DashboardPage() {
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
               High-Risk Patient Dashboard
             </h1>
-            <p className="text-xs text-clinical-muted mt-0.5">
-              AI-powered patient risk monitoring &amp; triage
-            </p>
+            <div className="flex items-center gap-3 mt-0.5">
+              <p className="text-xs text-clinical-muted">
+                AI-powered patient risk monitoring &amp; triage
+              </p>
+              <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
+                <Lock className="w-2.5 h-2.5" />
+                Authorized access
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
+            {syntheticData && (
+              <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-50 border border-purple-200 text-[11px] font-semibold text-purple-700">
+                <FlaskConical className="w-3 h-3" />
+                Simulation active
+              </span>
+            )}
             <button
               onClick={() => setShowAddPatient(true)}
               className="btn-secondary flex items-center gap-1.5 text-sm py-1.5 px-3"
@@ -223,10 +283,7 @@ export default function DashboardPage() {
         {loading ? (
           <div className="grid grid-cols-4 gap-2">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="card py-2.5 px-3 flex items-center gap-2"
-              >
+              <div key={i} className="card py-2.5 px-3 flex items-center gap-2">
                 <Skeleton className="w-8 h-8 rounded-lg" />
                 <div className="space-y-1">
                   <Skeleton className="h-5 w-8" />
@@ -240,7 +297,7 @@ export default function DashboardPage() {
             <MiniStatCard
               icon={<Users className="w-4 h-4" />}
               label="Monitored"
-              value={patients.length}
+              value={mergedPatients.length}
               accent="bg-primary-50 text-primary-600"
             />
             <MiniStatCard
@@ -296,7 +353,7 @@ export default function DashboardPage() {
                   <HighRiskCardSkeleton key={i} />
                 ))}
               </>
-            ) : patients.length === 0 ? (
+            ) : mergedPatients.length === 0 ? (
               <div className="card">
                 <EmptyState
                   icon={Users}
@@ -314,6 +371,7 @@ export default function DashboardPage() {
                     scored.patient.id === selectedPatientId &&
                     rightPanel === "patient"
                   }
+                  isSynthetic={syntheticPatientIds.has(scored.patient.id)}
                   onClick={() => handleSelectPatient(scored.patient.id)}
                 />
               ))
@@ -321,7 +379,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* RIGHT PANEL — Detail / Cohort (65%) */}
+        {/* RIGHT PANEL — Detail / Cohort / Simulation (65%) */}
         <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-clinical-border bg-white">
           {/* Tab bar */}
           <div className="flex-shrink-0 flex border-b border-clinical-border">
@@ -337,7 +395,10 @@ export default function DashboardPage() {
               Patient Detail
             </button>
             <button
-              onClick={() => setRightPanel("cohort")}
+              onClick={() => {
+                setRightPanel("cohort");
+                recordAuditEvent("cohort_insights_viewed");
+              }}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                 rightPanel === "cohort"
                   ? "border-primary-600 text-primary-700"
@@ -347,11 +408,29 @@ export default function DashboardPage() {
               <BarChart3 className="w-3.5 h-3.5" />
               Cohort Insights
             </button>
+            <button
+              onClick={() => setRightPanel("simulation")}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                rightPanel === "simulation"
+                  ? "border-purple-600 text-purple-700"
+                  : "border-transparent text-clinical-muted hover:text-slate-700"
+              }`}
+            >
+              <FlaskConical className="w-3.5 h-3.5" />
+              Simulation
+            </button>
           </div>
 
           {/* Panel content */}
           <div className="flex-1 overflow-y-auto p-5">
-            {rightPanel === "cohort" ? (
+            {rightPanel === "simulation" ? (
+              <SimulationPanel
+                activeScenarios={activeScenarios}
+                onGenerate={handleGenerateSimulation}
+                onReset={handleResetSimulation}
+                isSimulationActive={!!syntheticData}
+              />
+            ) : rightPanel === "cohort" ? (
               loading ? (
                 <div className="space-y-4">
                   <Skeleton className="h-5 w-40" />
@@ -382,9 +461,10 @@ export default function DashboardPage() {
             ) : (
               <PatientDetailPanel
                 scored={selectedScored}
-                checkins={checkins}
-                allAlerts={alerts}
+                checkins={mergedCheckins}
+                allAlerts={mergedAlerts}
                 onAcknowledge={handleAcknowledge}
+                isSynthetic={syntheticPatientIds.has(selectedScored.patient.id)}
               />
             )}
           </div>
@@ -408,57 +488,19 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={newPatient.name}
-                  onChange={(e) =>
-                    setNewPatient((p) => ({ ...p, name: e.target.value }))
-                  }
-                  className="input"
-                  placeholder="e.g. Sarah Chen"
-                />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                <input type="text" value={newPatient.name} onChange={(e) => setNewPatient((p) => ({ ...p, name: e.target.value }))} className="input" placeholder="e.g. Sarah Chen" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Age
-                </label>
-                <input
-                  type="number"
-                  value={newPatient.age}
-                  onChange={(e) =>
-                    setNewPatient((p) => ({ ...p, age: e.target.value }))
-                  }
-                  className="input"
-                  placeholder="e.g. 34"
-                />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Age</label>
+                <input type="number" value={newPatient.age} onChange={(e) => setNewPatient((p) => ({ ...p, age: e.target.value }))} className="input" placeholder="e.g. 34" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Condition
-                </label>
-                <input
-                  type="text"
-                  value={newPatient.condition}
-                  onChange={(e) =>
-                    setNewPatient((p) => ({ ...p, condition: e.target.value }))
-                  }
-                  className="input"
-                  placeholder="e.g. Rheumatoid Arthritis"
-                />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Condition</label>
+                <input type="text" value={newPatient.condition} onChange={(e) => setNewPatient((p) => ({ ...p, condition: e.target.value }))} className="input" placeholder="e.g. Rheumatoid Arthritis" />
               </div>
-              <button
-                onClick={handleAddPatient}
-                disabled={addingPatient}
-                className="btn-primary w-full flex items-center justify-center gap-2 py-2.5"
-              >
-                {addingPatient ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <UserPlus className="w-4 h-4" />
-                )}
+              <button onClick={handleAddPatient} disabled={addingPatient} className="btn-primary w-full flex items-center justify-center gap-2 py-2.5">
+                {addingPatient ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                 {addingPatient ? "Adding..." : "Add Patient"}
               </button>
             </div>
@@ -471,31 +513,13 @@ export default function DashboardPage() {
 
 // ── Mini Stat Card ──────────────────────────────────────────
 
-function MiniStatCard({
-  icon,
-  label,
-  value,
-  accent,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  accent: string;
-}) {
+function MiniStatCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent: string }) {
   return (
     <div className="card py-2.5 px-3 flex items-center gap-2.5">
-      <div
-        className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${accent}`}
-      >
-        {icon}
-      </div>
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${accent}`}>{icon}</div>
       <div>
-        <div className="text-lg font-bold text-slate-900 tabular-nums leading-tight">
-          {value}
-        </div>
-        <div className="text-[11px] text-clinical-muted font-medium leading-tight">
-          {label}
-        </div>
+        <div className="text-lg font-bold text-slate-900 tabular-nums leading-tight">{value}</div>
+        <div className="text-[11px] text-clinical-muted font-medium leading-tight">{label}</div>
       </div>
     </div>
   );

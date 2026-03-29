@@ -10,6 +10,7 @@ import { InsightChip } from "@/components/InsightChip";
 import { DropoutRiskCard } from "@/components/DropoutRiskCard";
 import { PatientTimeline } from "@/components/PatientTimeline";
 import { EmptyState } from "@/components/EmptyState";
+import { SyntheticBadge } from "@/components/SimulationPanel";
 import {
   User,
   Calendar,
@@ -61,11 +62,13 @@ export function PatientDetailPanel({
   checkins,
   allAlerts,
   onAcknowledge,
+  isSynthetic = false,
 }: {
   scored: RiskScoredPatient;
   checkins: CheckIn[];
   allAlerts: Alert[];
   onAcknowledge: (alertId: string) => void;
+  isSynthetic?: boolean;
 }) {
   const { patient, analysis, alerts, riskTier, insightChips, compositeScore } =
     scored;
@@ -102,6 +105,7 @@ export function PatientDetailPanel({
               <h2 className="text-lg font-bold text-slate-900 tracking-tight">
                 {patient.name}
               </h2>
+              {isSynthetic && <SyntheticBadge />}
               <div className="flex items-center gap-1.5">
                 <span
                   className={`w-2 h-2 rounded-full ${tierDot[riskTier]}`}
