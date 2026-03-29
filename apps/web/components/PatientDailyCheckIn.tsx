@@ -109,6 +109,11 @@ export function PatientDailyCheckIn({
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ── Date state ─────────────────────────────────────────
+  const [checkInDate, setCheckInDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+
   // ── Form state ──────────────────────────────────────────
   const [painLevel, setPainLevel] = useState<PainLevel | null>(null);
   const [sideEffects, setSideEffects] = useState("");
@@ -265,6 +270,8 @@ export function PatientDailyCheckIn({
         patientId: patient.id,
         transcript: fullTranscript,
         ...(audioUrl && { audioUrl }),
+        checkInDate: checkInDate || undefined,
+        painLevel: painLevel || undefined,
       });
 
       setPipelineStep("Analyzing your health update...");
@@ -288,6 +295,7 @@ export function PatientDailyCheckIn({
     setAudioFile(null);
     setPainLevel(null);
     setSideEffects("");
+    setCheckInDate(new Date().toISOString().split("T")[0]);
     setMedications(DEFAULT_MEDICATIONS.map((m) => ({ ...m, taken: null })));
     setSubmitted(false);
     setHasAdverseEvent(false);
@@ -398,6 +406,28 @@ export function PatientDailyCheckIn({
         <p className="text-sm text-clinical-muted mt-1">
           Hi {patient.name.split(" ")[0]}, how are you feeling today?
         </p>
+      </div>
+
+      {/* ── Check-in Date ────────────────────────────────── */}
+      <div className="card">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center text-xs font-bold text-primary-700">
+            <FileText className="w-3.5 h-3.5" />
+          </div>
+          <h2 className="text-sm font-semibold text-slate-900">
+            Check-in Date
+          </h2>
+        </div>
+        <p className="text-xs text-clinical-muted mb-3">
+          Select the date for this check-in. Defaults to today.
+        </p>
+        <input
+          type="date"
+          value={checkInDate}
+          onChange={(e) => setCheckInDate(e.target.value)}
+          max={new Date().toISOString().split("T")[0]}
+          className="input text-sm w-full max-w-xs"
+        />
       </div>
 
       {/* ── Step 1: Voice Update ────────────────────────── */}

@@ -18,6 +18,7 @@ import {
   Pill,
   Shield,
   BarChart3,
+  Search,
 } from "lucide-react";
 
 const clinicianNav = [
@@ -29,6 +30,7 @@ const clinicianNav = [
 const patientNav = [
   { href: "/checkin", label: "Voice Check-in", icon: Mic },
   { href: "/medication-scan", label: "Medication Scanner", icon: Pill },
+  { href: "/browse", label: "Browse Diseases", icon: Search },
   { href: "/settings", label: "Voice Phrase", icon: ShieldCheck },
 ];
 

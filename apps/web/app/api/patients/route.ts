@@ -9,10 +9,27 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return errorResponse("Unauthorized", 401);
 
-  const { data, error } = await supabase
-    .from("patients")
-    .select("*")
-    .order("created_at", { ascending: true });
+  // Look up role from app_users
+  const { data: appUser } = await supabase
+    .from("app_users")
+    .select("role")
+    .eq("auth_id", user.id)
+    .maybeSingle();
+
+  const role = appUser?.role || "patient";
+
+  let query = supabase.from("patients").select("*");
+
+  if (role === "clinician") {
+    // Clinician sees only their linked patients
+    query = query.eq("doctor_id", user.id);
+  } else if (role === "patient") {
+    // Patient sees only their own record
+    query = query.eq("user_id", user.id);
+  }
+  // super sees all — no filter
+
+  const { data, error } = await query.order("created_at", { ascending: true });
 
   if (error) return errorResponse(error.message, 500);
 

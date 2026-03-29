@@ -19,6 +19,8 @@ export function mapPatient(row: any): Patient {
     status: row.status,
     latestCheckInId: row.latest_check_in_id ?? undefined,
     voicePhrase: row.voice_phrase ?? undefined,
+    doctorId: row.doctor_id ?? undefined,
+    userId: row.user_id ?? undefined,
   };
 }
 
@@ -31,6 +33,8 @@ export function mapCheckIn(row: any, analysis?: AiAnalysis): CheckIn {
     transcript: row.transcript,
     analysis,
     spokenSummaryUrl: row.spoken_summary_url ?? undefined,
+    checkInDate: row.check_in_date ?? undefined,
+    painLevel: row.pain_level ?? undefined,
   };
 }
 

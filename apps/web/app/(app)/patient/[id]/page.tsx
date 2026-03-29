@@ -142,7 +142,7 @@ export default function PatientDetailPage() {
                 <span>{patient.trialId}</span>
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  {new Date(patient.enrolledAt).toLocaleDateString()}
+                  {new Date(patient.enrolledAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </span>
               </div>
             </div>
