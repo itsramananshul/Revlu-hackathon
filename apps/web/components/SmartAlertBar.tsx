@@ -1,0 +1,97 @@
+import type { SmartAlert, SmartAlertType, SmartAlertSeverity } from "@/lib/alert-engine";
+import {
+  Zap,
+  TrendingUp,
+  UserX,
+  MessageCircleWarning,
+  ShieldAlert,
+  LogOut,
+  ChevronRight,
+} from "lucide-react";
+
+// ── Type icon mapping ───────────────────────────────────────
+
+const typeIcon: Record<SmartAlertType, React.ComponentType<{ className?: string }>> = {
+  mismatch: MessageCircleWarning,
+  trend_spike: TrendingUp,
+  engagement_drop: UserX,
+  distress_signal: Zap,
+  adverse_reaction: ShieldAlert,
+  dropout_warning: LogOut,
+};
+
+const severityColor: Record<SmartAlertSeverity, string> = {
+  high: "bg-red-500",
+  medium: "bg-amber-500",
+  low: "bg-blue-400",
+};
+
+const severityBg: Record<SmartAlertSeverity, string> = {
+  high: "bg-red-50 border-red-200 hover:bg-red-100/60",
+  medium: "bg-amber-50 border-amber-200 hover:bg-amber-100/60",
+  low: "bg-slate-50 border-slate-200 hover:bg-slate-100/60",
+};
+
+// ── Component ───────────────────────────────────────────────
+
+export function SmartAlertBar({
+  alerts,
+  onAlertClick,
+}: {
+  alerts: SmartAlert[];
+  onAlertClick: (patientId: string) => void;
+}) {
+  if (alerts.length === 0) return null;
+
+  // Show max 4 in the bar
+  const visible = alerts.slice(0, 4);
+  const remaining = alerts.length - visible.length;
+
+  return (
+    <div className="flex-shrink-0">
+      <div className="flex items-center gap-2 mb-1.5">
+        <Zap className="w-3.5 h-3.5 text-amber-500" />
+        <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+          Smart Alerts
+        </h3>
+        <span className="text-[10px] font-bold text-white bg-red-500 rounded-full w-5 h-5 flex items-center justify-center">
+          {alerts.length}
+        </span>
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {visible.map((alert) => {
+          const Icon = typeIcon[alert.type];
+          return (
+            <button
+              key={alert.id}
+              onClick={() => onAlertClick(alert.patientId)}
+              className={`flex-shrink-0 flex items-start gap-2 px-3 py-2 rounded-lg border text-left transition-all duration-150 cursor-pointer min-w-[220px] max-w-[280px] ${severityBg[alert.severity]}`}
+            >
+              {/* Severity dot + icon */}
+              <div className="flex items-center gap-1.5 mt-0.5 flex-shrink-0">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${severityColor[alert.severity]}`}
+                />
+                <Icon className="w-3.5 h-3.5 text-slate-500" />
+              </div>
+              {/* Text */}
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] font-semibold text-slate-800 truncate">
+                  {alert.title}
+                </div>
+                <div className="text-[10px] text-clinical-muted truncate">
+                  {alert.patientName}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+        {remaining > 0 && (
+          <div className="flex-shrink-0 flex items-center px-3 text-[11px] text-clinical-muted font-medium">
+            +{remaining} more
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

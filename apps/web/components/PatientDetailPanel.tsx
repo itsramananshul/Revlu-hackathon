@@ -1,20 +1,21 @@
-import type { CheckIn, Alert, AiAnalysis } from "@trialpulse/types";
+import { useMemo } from "react";
+import type { CheckIn, Alert } from "@trialpulse/types";
 import type { RiskScoredPatient } from "@/lib/risk-scoring";
+import { buildPatientTimeline, getPainTrend } from "@/lib/patient-timeline";
+import { predictDropoutRisk } from "@/lib/dropout-risk";
 import { SeverityBadge, RiskBadge } from "@/components/StatusBadge";
 import { DropoutRiskBar } from "@/components/DropoutRiskBar";
 import { SymptomList } from "@/components/SymptomList";
 import { InsightChip } from "@/components/InsightChip";
+import { DropoutRiskCard } from "@/components/DropoutRiskCard";
+import { PatientTimeline } from "@/components/PatientTimeline";
 import { EmptyState } from "@/components/EmptyState";
-import { Skeleton } from "@/components/Skeleton";
 import {
   User,
   Calendar,
   AlertTriangle,
   FileText,
-  Mic,
   Stethoscope,
-  Pill,
-  TrendingDown,
   ShieldAlert,
 } from "lucide-react";
 
@@ -58,30 +59,40 @@ export function PatientDetailEmpty() {
 export function PatientDetailPanel({
   scored,
   checkins,
+  allAlerts,
   onAcknowledge,
 }: {
   scored: RiskScoredPatient;
   checkins: CheckIn[];
+  allAlerts: Alert[];
   onAcknowledge: (alertId: string) => void;
 }) {
   const { patient, analysis, alerts, riskTier, insightChips, compositeScore } =
     scored;
 
-  const patientCheckins = checkins
-    .filter((c) => c.patientId === patient.id)
-    .sort(
-      (a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
-
   const unacknowledgedAlerts = alerts.filter((a) => !a.acknowledged);
+
+  // ── Timeline ────────────────────────────────────────────
+  const timelineEvents = useMemo(
+    () => buildPatientTimeline(patient, checkins, allAlerts),
+    [patient, checkins, allAlerts]
+  );
+
+  const painTrend = useMemo(
+    () => getPainTrend(checkins, patient.id),
+    [checkins, patient.id]
+  );
+
+  // ── Dropout prediction ──────────────────────────────────
+  const dropoutPrediction = useMemo(
+    () => predictDropoutRisk(patient, checkins, allAlerts, analysis),
+    [patient, checkins, allAlerts, analysis]
+  );
 
   return (
     <div className="space-y-5 overflow-y-auto">
       {/* ── Patient Header ─────────────────────────────── */}
-      <div
-        className={`rounded-xl border p-4 ${tierHeaderBg[riskTier]}`}
-      >
+      <div className={`rounded-xl border p-4 ${tierHeaderBg[riskTier]}`}>
         <div className="flex items-start gap-3">
           <div className="w-11 h-11 rounded-full bg-white/80 flex items-center justify-center flex-shrink-0 shadow-sm">
             <User className="w-5 h-5 text-slate-600" />
@@ -163,6 +174,9 @@ export function PatientDetailPanel({
         </div>
       )}
 
+      {/* ── Dropout Prediction ─────────────────────────── */}
+      <DropoutRiskCard prediction={dropoutPrediction} />
+
       {/* ── AI Clinical Summary ────────────────────────── */}
       {analysis ? (
         <div className="card">
@@ -171,14 +185,11 @@ export function PatientDetailPanel({
             AI Clinical Summary
           </h3>
 
-          {/* Summary text */}
           <p className="text-sm text-slate-700 leading-relaxed mb-4">
             {analysis.summary}
           </p>
 
-          {/* Symptoms + Risk indicators side-by-side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Symptoms */}
             <div>
               <h4 className="text-[11px] font-semibold text-clinical-muted uppercase tracking-wider mb-2">
                 Symptoms
@@ -186,11 +197,10 @@ export function PatientDetailPanel({
               <SymptomList symptoms={analysis.symptoms} />
             </div>
 
-            {/* Risk indicators */}
             <div className="space-y-3">
               <div>
                 <h4 className="text-[11px] font-semibold text-clinical-muted uppercase tracking-wider mb-1.5">
-                  Dropout Risk
+                  Dropout Risk (AI)
                 </h4>
                 <DropoutRiskBar risk={analysis.dropoutRisk} />
               </div>
@@ -216,7 +226,6 @@ export function PatientDetailPanel({
             </div>
           </div>
 
-          {/* Recommended Action */}
           <div className="mt-4 p-3 rounded-lg bg-primary-50/60 border border-primary-200">
             <h4 className="text-[11px] font-semibold text-primary-800 uppercase tracking-wide mb-1">
               Recommended Action
@@ -236,58 +245,8 @@ export function PatientDetailPanel({
         </div>
       )}
 
-      {/* ── Check-in History ───────────────────────────── */}
-      <div className="card">
-        <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-3">
-          <Mic className="w-4 h-4 text-slate-400" />
-          Check-in History
-          {patientCheckins.length > 0 && (
-            <span className="badge-neutral">{patientCheckins.length}</span>
-          )}
-        </h3>
-        {patientCheckins.length === 0 ? (
-          <EmptyState
-            icon={Mic}
-            title="No check-ins"
-            description="Voice check-ins will appear here."
-          />
-        ) : (
-          <div className="space-y-2">
-            {patientCheckins.map((ci) => (
-              <div
-                key={ci.id}
-                className="p-3 rounded-lg bg-slate-50/80 border border-slate-100"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-medium text-slate-600">
-                    {new Date(ci.timestamp).toLocaleString()}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    {ci.analysis?.adverseEvent && (
-                      <span className="badge-danger text-[10px]">
-                        Adverse
-                      </span>
-                    )}
-                    {ci.analysis && (
-                      <span className="text-[10px] text-clinical-muted">
-                        Pain max:{" "}
-                        {Math.max(
-                          ...ci.analysis.symptoms.map((s) => s.severity),
-                          0
-                        )}
-                        /10
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed">
-                  {ci.transcript}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* ── Patient Timeline ───────────────────────────── */}
+      <PatientTimeline events={timelineEvents} painTrend={painTrend} />
     </div>
   );
 }
