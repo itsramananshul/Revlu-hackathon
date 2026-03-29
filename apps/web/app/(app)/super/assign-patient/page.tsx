@@ -239,8 +239,12 @@ export default function AssignPatientPage() {
   }, [load]);
 
   // Find the doctor name if patient is already assigned
-  const assignedDoctorName = selectedPatient?.doctorId
-    ? MOCK_DOCTORS.find((d) => d.id === selectedPatient.doctorId)?.name
+  const assignments = typeof window !== "undefined"
+    ? JSON.parse(localStorage.getItem("voxvitals-assignments") || "{}")
+    : {};
+  const assignedDoctorName = selectedPatient
+    ? assignments[selectedPatient.id]?.doctorName ||
+      MOCK_DOCTORS.find((d) => d.id === selectedPatient.doctorId)?.name
     : undefined;
 
   const handleAssign = async () => {
@@ -248,26 +252,18 @@ export default function AssignPatientPage() {
 
     setAssigning(true);
     try {
-      // Update patient's doctorId via API
-      const res = await fetch(`/api/patients/${selectedPatient.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ doctorId: selectedDoctor.id }),
-      });
-      const json = await res.json();
-
-      if (!json.success) {
-        toast.error(json.message || "Failed to assign patient");
-        return;
-      }
-
-      // Update local state
+      // Update local state (mock doctors aren't in DB, so we track assignment client-side)
       setPatients((prev) =>
         prev.map((p) =>
           p.id === selectedPatient.id ? { ...p, doctorId: selectedDoctor.id } : p
         )
       );
       setSelectedPatient({ ...selectedPatient, doctorId: selectedDoctor.id });
+
+      // Save assignment to localStorage so it persists during demo
+      const assignments = JSON.parse(localStorage.getItem("voxvitals-assignments") || "{}");
+      assignments[selectedPatient.id] = { doctorId: selectedDoctor.id, doctorName: selectedDoctor.name };
+      localStorage.setItem("voxvitals-assignments", JSON.stringify(assignments));
 
       toast.success(`${selectedPatient.name} assigned to ${selectedDoctor.name}`);
     } catch {
@@ -281,7 +277,8 @@ export default function AssignPatientPage() {
   const alreadyAssigned =
     selectedDoctor &&
     selectedPatient &&
-    selectedPatient.doctorId === selectedDoctor.id;
+    (selectedPatient.doctorId === selectedDoctor.id ||
+      assignments[selectedPatient.id]?.doctorId === selectedDoctor.id);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
