@@ -9,6 +9,7 @@ import { SymptomList } from "@/components/SymptomList";
 import { InsightChip } from "@/components/InsightChip";
 import { DropoutRiskCard } from "@/components/DropoutRiskCard";
 import { PatientTimeline } from "@/components/PatientTimeline";
+import { CommunicationPanel } from "@/components/CommunicationPanel";
 import { EmptyState } from "@/components/EmptyState";
 import { SyntheticBadge } from "@/components/SimulationPanel";
 import {
@@ -248,6 +249,14 @@ export function PatientDetailPanel({
           />
         </div>
       )}
+
+      {/* ── Communication ─────────────────────────────── */}
+      <CommunicationPanel
+        scored={scored}
+        checkins={checkins}
+        alerts={alerts}
+        dropoutPrediction={dropoutPrediction}
+      />
 
       {/* ── Patient Timeline ───────────────────────────── */}
       <PatientTimeline events={timelineEvents} painTrend={painTrend} />

@@ -22,6 +22,13 @@ import {
 import { SmartAlertBar } from "@/components/SmartAlertBar";
 import { CohortInsightsPanel } from "@/components/CohortInsightsPanel";
 import { SimulationPanel, SyntheticBadge } from "@/components/SimulationPanel";
+import { OptimizationPanel } from "@/components/OptimizationPanel";
+import {
+  profilePatient,
+  getProfileDistribution,
+  analyzeInterventionPatterns,
+} from "@/lib/optimization/patient-profiles";
+import { predictDropoutRisk } from "@/lib/dropout-risk";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
 import { HighRiskCardSkeleton, Skeleton } from "@/components/Skeleton";
@@ -38,11 +45,11 @@ import {
   User,
   BarChart3,
   FlaskConical,
-  Shield,
   Lock,
+  Target,
 } from "lucide-react";
 
-type RightPanelView = "patient" | "cohort" | "simulation";
+type RightPanelView = "patient" | "cohort" | "simulation" | "optimization";
 
 export default function DashboardPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -186,6 +193,25 @@ export default function DashboardPage() {
   const cohortMetrics = useMemo(
     () => computeCohortMetrics(mergedPatients, mergedCheckins, rankedPatients),
     [mergedPatients, mergedCheckins, rankedPatients]
+  );
+
+  // ── Patient profiles (optimization) ──────────────────────
+
+  const patientProfiles = useMemo(() => {
+    return rankedPatients.map((scored) => {
+      const dp = predictDropoutRisk(scored.patient, mergedCheckins, mergedAlerts, scored.analysis);
+      return profilePatient(scored, mergedCheckins, mergedAlerts, dp);
+    });
+  }, [rankedPatients, mergedCheckins, mergedAlerts]);
+
+  const profileDistribution = useMemo(
+    () => getProfileDistribution(patientProfiles),
+    [patientProfiles]
+  );
+
+  const interventionInsights = useMemo(
+    () => analyzeInterventionPatterns(patientProfiles),
+    [patientProfiles]
   );
 
   // ── Auto-select first patient ─────────────────────────────
@@ -419,11 +445,41 @@ export default function DashboardPage() {
               <FlaskConical className="w-3.5 h-3.5" />
               Simulation
             </button>
+            <button
+              onClick={() => setRightPanel("optimization")}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                rightPanel === "optimization"
+                  ? "border-primary-600 text-primary-700"
+                  : "border-transparent text-clinical-muted hover:text-slate-700"
+              }`}
+            >
+              <Target className="w-3.5 h-3.5" />
+              Optimization
+            </button>
           </div>
 
           {/* Panel content */}
           <div className="flex-1 overflow-y-auto p-5">
-            {rightPanel === "simulation" ? (
+            {rightPanel === "optimization" ? (
+              loading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-5 w-40" />
+                  <div className="grid grid-cols-3 gap-3">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <Skeleton key={i} className="h-20 rounded-lg" />
+                    ))}
+                  </div>
+                  <Skeleton className="h-40 rounded-lg" />
+                </div>
+              ) : (
+                <OptimizationPanel
+                  profiles={patientProfiles}
+                  distribution={profileDistribution}
+                  interventionInsights={interventionInsights}
+                  onSelectPatient={handleSelectPatient}
+                />
+              )
+            ) : rightPanel === "simulation" ? (
               <SimulationPanel
                 activeScenarios={activeScenarios}
                 onGenerate={handleGenerateSimulation}
