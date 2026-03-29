@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   // Find the patient record linked to that user
   const { data: patientRecord, error: patientError } = await supabase
     .from("patients")
-    .select("id, name, doctor_id")
+    .select("id, name")
     .eq("user_id", appUser.auth_id)
     .maybeSingle();
 
@@ -66,20 +66,6 @@ export async function POST(request: Request) {
       "Patient has no health record yet. They need to complete signup first.",
       404
     );
-  }
-
-  if (patientRecord.doctor_id === user.id) {
-    return errorResponse("This patient is already linked to you.", 409);
-  }
-
-  // Link the patient to this doctor
-  const { error: updateError } = await supabase
-    .from("patients")
-    .update({ doctor_id: user.id })
-    .eq("id", patientRecord.id);
-
-  if (updateError) {
-    return errorResponse("Failed to link patient: " + updateError.message, 500);
   }
 
   return successResponse(

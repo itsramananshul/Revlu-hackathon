@@ -9,14 +9,18 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return errorResponse("Unauthorized", 401);
 
-  // Look up role from app_users
-  const { data: appUser } = await supabase
-    .from("app_users")
-    .select("role")
-    .eq("auth_id", user.id)
-    .maybeSingle();
+  // Determine role: check user_metadata first (set by role selection), then app_users table
+  const metaRole = user.user_metadata?.voxvitals_role;
 
-  const role = appUser?.role || "patient";
+  let role = metaRole || null;
+  if (!role) {
+    const { data: appUser } = await supabase
+      .from("app_users")
+      .select("role")
+      .eq("auth_id", user.id)
+      .maybeSingle();
+    role = appUser?.role || "patient";
+  }
 
   let query = supabase.from("patients").select("*");
 
