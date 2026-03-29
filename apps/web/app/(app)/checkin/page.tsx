@@ -6,6 +6,7 @@ import type { Patient, AiAnalysis } from "@trialpulse/types";
 import { api } from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
 import { VoiceVerification } from "@/components/VoiceVerification";
+import { PatientDailyCheckIn } from "@/components/PatientDailyCheckIn";
 import { toast } from "sonner";
 import {
   Mic,
@@ -35,6 +36,7 @@ export default function CheckInPage() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [role, setRole] = useState<string | null>(null);
+  const [patientRecord, setPatientRecord] = useState<Patient | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -42,12 +44,35 @@ export default function CheckInPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    setRole(localStorage.getItem("voxvitals-role"));
+    const storedRole = localStorage.getItem("voxvitals-role");
+    setRole(storedRole);
     api
       .getPatients()
-      .then(setPatients)
+      .then((pts) => {
+        setPatients(pts);
+        // For patient role, auto-select the first patient as their record
+        if (storedRole === "patient" && pts.length > 0) {
+          setPatientRecord(pts[0]);
+        }
+      })
       .catch(() => toast.error("Failed to load patients"));
   }, []);
+
+  // ── Patient mode: show guided daily check-in ──────────
+  if (role === "patient" && patientRecord) {
+    return <PatientDailyCheckIn patient={patientRecord} />;
+  }
+
+  if (role === "patient" && !patientRecord) {
+    return (
+      <div className="max-w-lg mx-auto text-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-primary-600 mx-auto mb-3" />
+        <p className="text-sm text-clinical-muted">Loading your profile...</p>
+      </div>
+    );
+  }
+
+  // ── Clinician mode: existing flow below ───────────────
 
   const handleRecord = async () => {
     if (isRecording) {
