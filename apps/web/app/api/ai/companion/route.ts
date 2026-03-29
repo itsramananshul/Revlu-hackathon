@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { message, patientContext } = body;
+  const { message, history, patientContext } = body;
 
   if (!message || typeof message !== "string") {
     return NextResponse.json(
@@ -42,6 +42,10 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+
+  // Build multi-turn conversation from history
+  const conversationHistory: { role: string; content: string }[] =
+    Array.isArray(history) ? history : [];
 
   // Build context from patient data (passed from client, validated server-side)
   let contextBlock = "";
@@ -73,6 +77,21 @@ export async function POST(request: Request) {
   const geminiKey = process.env.GEMINI_API_KEY?.trim();
   if (geminiKey) {
     try {
+      // Build Gemini multi-turn contents from history
+      const geminiContents = conversationHistory.map((h) => ({
+        role: h.role === "user" ? "user" : "model",
+        parts: [{ text: h.content }],
+      }));
+      // Ensure conversation starts with a user message (Gemini requirement)
+      if (geminiContents.length === 0 || geminiContents[0].role !== "user") {
+        geminiContents.unshift({ role: "user", parts: [{ text: message }] });
+      }
+      // Ensure the last message is the current user message
+      const lastMsg = geminiContents[geminiContents.length - 1];
+      if (!lastMsg || lastMsg.role !== "user" || lastMsg.parts[0].text !== message) {
+        geminiContents.push({ role: "user", parts: [{ text: message }] });
+      }
+
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
         {
@@ -80,9 +99,7 @@ export async function POST(request: Request) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: fullPrompt }] },
-            contents: [
-              { role: "user", parts: [{ text: message }] },
-            ],
+            contents: geminiContents,
             generationConfig: { temperature: 0.4, maxOutputTokens: 512 },
           }),
         }
@@ -121,7 +138,10 @@ export async function POST(request: Request) {
             model: "meta-llama/Meta-Llama-3.1-8B-Instruct",
             messages: [
               { role: "system", content: fullPrompt },
-              { role: "user", content: message },
+              ...conversationHistory.map((h) => ({
+                role: h.role === "user" ? "user" as const : "assistant" as const,
+                content: h.content,
+              })),
             ],
             temperature: 0.4,
             max_tokens: 512,

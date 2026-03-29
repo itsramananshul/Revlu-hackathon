@@ -129,11 +129,22 @@ export function AICompanionWidget({ patient }: { patient: Patient | null }) {
     const detected = detectSymptoms(text);
 
     try {
+      // Build conversation history for context (last 20 messages)
+      const currentMessages = [...messages, userMsg];
+      const history = currentMessages
+        .filter((m) => m.role !== "system")
+        .slice(-20)
+        .map((m) => ({
+          role: m.role === "patient" ? "user" : "assistant",
+          content: m.content,
+        }));
+
       const res = await fetch("/api/ai/companion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
+          history,
           patientContext: buildContext(),
         }),
       });
