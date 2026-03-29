@@ -171,7 +171,7 @@ function detectEngagementDrop(
       type: "engagement_drop",
       severity: daysSince >= 14 ? "high" : "low",
       title: "Missed check-ins",
-      description: `${patient.name} hasn't checked in for ${daysSince} days. Last check-in: ${new Date(latest.timestamp).toLocaleDateString()}.`,
+      description: `${patient.name} hasn't checked in for ${daysSince} days. Last check-in: ${new Date(latest.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.`,
       timestamp: latest.timestamp,
     };
   }

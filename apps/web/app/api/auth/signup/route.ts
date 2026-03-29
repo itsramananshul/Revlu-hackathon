@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { email, password } = body;
+  const { email, password, role: requestedRole, name, age, condition } = body;
 
   if (!email || !password) {
     return NextResponse.json(
@@ -86,16 +86,40 @@ export async function POST(request: Request) {
     );
   }
 
+  // Determine role (default to patient)
+  const userRole = requestedRole === "clinician" || requestedRole === "super" ? requestedRole : "patient";
+
   // Insert into app_users (service role bypasses RLS)
   const { error: insertError } = await supabase.from("app_users").insert({
     auth_id: authUser?.id || null,
     email: email.toLowerCase(),
-    role: "patient",
+    role: userRole,
   });
 
   if (insertError) {
     console.error("[Signup] app_users insert error:", insertError.message);
     // Don't fail signup if this fails — auth user is created
+  }
+
+  // If role is patient, also create a patient record
+  if (userRole === "patient" && authUser?.id) {
+    const patientName = name || email.split("@")[0];
+    const patientAge = age ? Number(age) : 30;
+    const patientCondition = condition || "General";
+    const trialId = `TRIAL-VX-${Date.now().toString(36).toUpperCase()}`;
+
+    const { error: patientError } = await supabase.from("patients").insert({
+      name: patientName,
+      age: patientAge,
+      condition: patientCondition,
+      trial_id: trialId,
+      status: "active",
+      user_id: authUser.id,
+    });
+
+    if (patientError) {
+      console.error("[Signup] patient record insert error:", patientError.message);
+    }
   }
 
   // Sign the user in to get a session

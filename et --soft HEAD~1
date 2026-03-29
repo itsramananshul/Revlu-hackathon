@@ -1,0 +1,31 @@
+[33m64d07d6[m Feature done - polish the UI/UX and boost user's emotion
+[33m791b338[m fixed the camera feed
+[33m2c3064c[m fixed the emergency button bug
+[33m43f4c08[m Integration via WebAssembly
+[33m7b6774f[m Am I Okay? Button
+[33m03d6288[m fixed ai conversation bug
+[33m1be2b58[m fixed ai conversation history bug
+[33mf9f1f33[m fix AI api call bug
+[33m8113937[m chatbot embedded
+[33m9dc74aa[m patient feature 1 finished
+[33md3ce19f[m role slection fix
+[33mf8bbbfc[m Trial Optimization Layer and Smart Communication Layer
+[33md5cea95[m Synthetic Simulation / Patient Stimulation and Secure Data Layer (HIPAA-Style Handling)
+[33m0311fbe[m Doctor new features
+[33m138bf5b[m Add yolo-service and update medication scanner
+[33md74d80a[m Doctor Dashboard Design & UX Considerations
+[33m428b493[m High-Risk Patient Dashboard
+[33m550d553[m model training AI
+[33m0c65bc4[m finalize the voice auth fixll
+[33m60bd722[m finalize the voice auth fix
+[33m4d9da13[m finalize the voice auth fixd
+[33m7836389[m finalize the voice auth
+[33me413348[m voice auth
+[33m2877eee[m voice detection authorization
+[33mb0a6e02[m patient mode and clinical mode switching
+[33ma2ab5d8[m feat(product): add dual-mode clinical workflow
+[33m2853fce[m[33m ([m[1;31morigin/Phong-branch[m[33m)[m feat: implement end-to-end pipeline (check-in → AI → analysis → alerts → dashboard), fix Supabase config, improve demo UX
+[33me191e32[m add roadmap and next-step.md
+[33mc8602b6[m fix deployment bug
+[33m411829f[m Voxvitals: Supabase-backed clinical trial monitoring app
+[33mc107f32[m first commit

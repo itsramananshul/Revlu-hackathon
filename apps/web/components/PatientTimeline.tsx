@@ -195,9 +195,10 @@ function TimelineEventCard({ event }: { event: TimelineEvent }) {
           </div>
           <span className="text-[10px] text-clinical-muted flex items-center gap-1">
             <Clock className="w-2.5 h-2.5" />
-            {new Date(event.timestamp).toLocaleDateString(undefined, {
+            {new Date(event.timestamp).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
+              year: "numeric",
               hour: "2-digit",
               minute: "2-digit",
             })}

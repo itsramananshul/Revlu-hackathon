@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { SmartAlert, SmartAlertType, SmartAlertSeverity } from "@/lib/alert-engine";
 import {
   Zap,
@@ -7,6 +8,8 @@ import {
   ShieldAlert,
   LogOut,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 // ── Type icon mapping ───────────────────────────────────────
@@ -42,11 +45,13 @@ export function SmartAlertBar({
   alerts: SmartAlert[];
   onAlertClick: (patientId: string) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (alerts.length === 0) return null;
 
-  // Show max 4 in the bar
-  const visible = alerts.slice(0, 4);
-  const remaining = alerts.length - visible.length;
+  // Show max 4 collapsed, all when expanded
+  const visible = expanded ? alerts : alerts.slice(0, 4);
+  const remaining = alerts.length - 4;
 
   return (
     <div className="flex-shrink-0">
@@ -59,7 +64,7 @@ export function SmartAlertBar({
           {alerts.length}
         </span>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-x-auto pb-1 flex-wrap">
         {visible.map((alert) => {
           const Icon = typeIcon[alert.type];
           return (
@@ -88,9 +93,22 @@ export function SmartAlertBar({
           );
         })}
         {remaining > 0 && (
-          <div className="flex-shrink-0 flex items-center px-3 text-[11px] text-clinical-muted font-medium">
-            +{remaining} more
-          </div>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex-shrink-0 flex items-center gap-1 px-3 text-[11px] text-primary-600 font-medium hover:text-primary-700 transition-colors cursor-pointer"
+          >
+            {expanded ? (
+              <>
+                Show less
+                <ChevronUp className="w-3 h-3" />
+              </>
+            ) : (
+              <>
+                +{remaining} more
+                <ChevronDown className="w-3 h-3" />
+              </>
+            )}
+          </button>
         )}
       </div>
     </div>

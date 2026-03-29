@@ -52,6 +52,8 @@ export const api = {
     patientId: string;
     transcript: string;
     audioUrl?: string;
+    checkInDate?: string;
+    painLevel?: string;
   }) =>
     request<import("@trialpulse/types").CheckIn>("/checkins", {
       method: "POST",

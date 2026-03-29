@@ -20,6 +20,8 @@ export interface Patient {
   status: PatientStatus;
   latestCheckInId?: string;
   voicePhrase?: string;
+  doctorId?: string;
+  userId?: string;
 }
 
 // --- Voice Verification ---
@@ -40,6 +42,8 @@ export interface CheckIn {
   transcript: string;
   analysis?: AiAnalysis;
   spokenSummaryUrl?: string;
+  checkInDate?: string;
+  painLevel?: string;
 }
 
 // --- AI Analysis (Normalized Contract) ---

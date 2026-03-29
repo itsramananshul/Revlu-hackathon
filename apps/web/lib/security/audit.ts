@@ -12,7 +12,9 @@ export type AuditAction =
   | "simulation_cleared"
   | "cohort_insights_viewed"
   | "emergency_alert_triggered"
-  | "emergency_alert_resolved";
+  | "emergency_alert_resolved"
+  | "voice_verification_passed"
+  | "voice_verification_skipped";
 
 export interface AuditEvent {
   id: string;
