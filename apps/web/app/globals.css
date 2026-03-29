@@ -16,7 +16,7 @@
     @apply bg-white rounded-xl border border-clinical-border/80 shadow-sm p-5 transition-all duration-200;
   }
   .card-hover {
-    @apply card hover:shadow-md hover:border-slate-300/80;
+    @apply card hover:shadow-md hover:border-slate-300/80 hover:-translate-y-0.5;
   }
   .badge {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide;
@@ -63,4 +63,28 @@
 
 .alert-critical {
   animation: pulse-critical 2.5s ease-in-out infinite;
+}
+
+/* Staggered animation delays */
+.animate-delay-100 { animation-delay: 100ms; }
+.animate-delay-200 { animation-delay: 200ms; }
+.animate-delay-300 { animation-delay: 300ms; }
+.animate-delay-400 { animation-delay: 400ms; }
+
+/* Glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Emergency button pulse */
+@keyframes pulse-emergency {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+}
+
+.emergency-pulse {
+  animation: pulse-emergency 2s ease-in-out infinite;
 }

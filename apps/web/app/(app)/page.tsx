@@ -84,9 +84,9 @@ export default function RoleSelectionPage() {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 z-50">
-      <div className="max-w-lg w-full px-6 text-center">
+      <div className="max-w-lg w-full px-6 text-center animate-fade-in-up">
         {/* Logo */}
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 mb-5 shadow-lg">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 mb-5 shadow-lg animate-scale-in">
           <Activity className="w-8 h-8 text-white" />
         </div>
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
@@ -100,7 +100,7 @@ export default function RoleSelectionPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <button
             onClick={() => selectRole("patient")}
-            className="group bg-white border-2 border-slate-200 hover:border-emerald-400 rounded-2xl p-6 transition-all duration-200 hover:shadow-lg text-left"
+            className="group bg-white border-2 border-slate-200 hover:border-emerald-400 rounded-2xl p-6 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:shadow-emerald-100/50 text-left animate-fade-in-up animate-delay-100"
           >
             <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Mic className="w-6 h-6 text-emerald-600" />
@@ -115,7 +115,7 @@ export default function RoleSelectionPage() {
 
           <button
             onClick={() => selectRole("clinician")}
-            className="group bg-white border-2 border-slate-200 hover:border-primary-400 rounded-2xl p-6 transition-all duration-200 hover:shadow-lg text-left"
+            className="group bg-white border-2 border-slate-200 hover:border-primary-400 rounded-2xl p-6 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:shadow-primary-100/50 text-left animate-fade-in-up animate-delay-200"
           >
             <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Stethoscope className="w-6 h-6 text-primary-600" />
@@ -130,7 +130,7 @@ export default function RoleSelectionPage() {
 
           <button
             onClick={() => selectRole("super")}
-            className="group bg-white border-2 border-slate-200 hover:border-purple-400 rounded-2xl p-6 transition-all duration-200 hover:shadow-lg text-left"
+            className="group bg-white border-2 border-slate-200 hover:border-purple-400 rounded-2xl p-6 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:shadow-purple-100/50 text-left animate-fade-in-up animate-delay-300"
           >
             <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Shield className="w-6 h-6 text-purple-600" />

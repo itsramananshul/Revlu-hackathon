@@ -73,11 +73,18 @@ export function SmartAlertBar({
               onClick={() => onAlertClick(alert.patientId)}
               className={`flex-shrink-0 flex items-start gap-2 px-3 py-2 rounded-lg border text-left transition-all duration-150 cursor-pointer min-w-[220px] max-w-[280px] ${severityBg[alert.severity]}`}
             >
-              {/* Severity dot + icon */}
+              {/* Severity dot + label + icon */}
               <div className="flex items-center gap-1.5 mt-0.5 flex-shrink-0">
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${severityColor[alert.severity]}`}
                 />
+                <span className={`text-[8px] font-bold uppercase tracking-wider ${
+                  alert.severity === "high" ? "text-red-600"
+                    : alert.severity === "medium" ? "text-amber-600"
+                    : "text-blue-500"
+                }`}>
+                  {alert.severity}
+                </span>
                 <Icon className="w-3.5 h-3.5 text-slate-500" />
               </div>
               {/* Text */}
