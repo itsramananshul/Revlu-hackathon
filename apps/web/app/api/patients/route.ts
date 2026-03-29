@@ -20,8 +20,11 @@ export async function GET(request: Request) {
   if (clientRole === "patient") {
     // Patient only sees their own record
     query = query.eq("user_id", user.id);
+  } else if (clientRole === "clinician") {
+    // Doctor sees only patients assigned to them
+    query = query.eq("doctor_id", user.id);
   }
-  // Doctors, clinicians, and lead doctors see all patients
+  // Lead doctor (super) sees all patients
 
   const { data, error } = await query.order("created_at", { ascending: true });
 

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Patient } from "@trialpulse/types";
 import { toast } from "sonner";
 import {
+  Stethoscope,
   Mic,
   MicOff,
   Send,
@@ -99,6 +100,23 @@ export function PatientDailyCheckIn({
 }: {
   patient: Patient;
 }) {
+  // ── Assigned doctor ─────────────────────────────────────
+  const [doctorName, setDoctorName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (patient.doctorId) {
+      fetch("/api/doctors")
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.success) {
+            const doc = json.data.find((d: any) => d.id === patient.doctorId);
+            if (doc) setDoctorName(doc.name);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [patient.doctorId]);
+
   // ── Voice state ─────────────────────────────────────────
   const [transcript, setTranscript] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -406,6 +424,12 @@ export function PatientDailyCheckIn({
         <p className="text-sm text-clinical-muted mt-1">
           Hi {patient.name.split(" ")[0]}, how are you feeling today?
         </p>
+        {doctorName && (
+          <div className="inline-flex items-center gap-2 mt-2 px-3 py-1.5 rounded-full bg-primary-50 border border-primary-200 text-sm text-primary-700">
+            <Stethoscope className="w-3.5 h-3.5" />
+            <span>Your doctor: <strong>{doctorName}</strong></span>
+          </div>
+        )}
       </div>
 
       {/* ── Check-in Date ────────────────────────────────── */}
