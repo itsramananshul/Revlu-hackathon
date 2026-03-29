@@ -9,32 +9,30 @@ import type {
   CheckIn,
 } from "@trialpulse/types";
 import { api } from "@/lib/api";
-import { rankPatientsByRisk } from "@/lib/risk-scoring";
-import { PatientStatusBadge, SeverityBadge } from "@/components/StatusBadge";
-import { DropoutRiskBar } from "@/components/DropoutRiskBar";
+import { rankPatientsByRisk, type RiskScoredPatient } from "@/lib/risk-scoring";
 import { HighRiskPatientCard } from "@/components/HighRiskPatientCard";
+import {
+  PatientDetailPanel,
+  PatientDetailEmpty,
+} from "@/components/PatientDetailPanel";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
 import {
   StatCardSkeleton,
-  PatientCardSkeleton,
-  AlertSkeleton,
   HighRiskCardSkeleton,
 } from "@/components/Skeleton";
+import { Skeleton } from "@/components/Skeleton";
 import { toast } from "sonner";
 import {
   Users,
   AlertTriangle,
-  TrendingUp,
-  Bell,
-  ChevronRight,
   Flame,
   Mic,
   UserPlus,
   X,
   Loader2,
-  ShieldCheck,
   Activity,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -44,6 +42,9 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
+    null
+  );
   const [showAddPatient, setShowAddPatient] = useState(false);
   const [addingPatient, setAddingPatient] = useState(false);
   const [newPatient, setNewPatient] = useState({
@@ -51,6 +52,8 @@ export default function DashboardPage() {
     age: "",
     condition: "",
   });
+
+  // ── Data loading ──────────────────────────────────────────
 
   const generateTrialId = () => {
     const num = String(patients.length + 1).padStart(3, "0");
@@ -75,7 +78,9 @@ export default function DashboardPage() {
       setNewPatient({ name: "", age: "", condition: "" });
       load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add patient");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to add patient"
+      );
     } finally {
       setAddingPatient(false);
     }
@@ -123,8 +128,6 @@ export default function DashboardPage() {
     [patients, checkins, alerts]
   );
 
-  const topFive = rankedPatients.slice(0, 5);
-
   const highRiskCount = rankedPatients.filter(
     (r) => r.riskTier === "critical" || r.riskTier === "high"
   ).length;
@@ -139,57 +142,177 @@ export default function DashboardPage() {
     return d.toDateString() === now.toDateString();
   }).length;
 
-  // ── Legacy helper for "All Patients" grid ─────────────────
+  // Auto-select first patient when data loads
+  useEffect(() => {
+    if (!loading && rankedPatients.length > 0 && !selectedPatientId) {
+      setSelectedPatientId(rankedPatients[0].patient.id);
+    }
+  }, [loading, rankedPatients, selectedPatientId]);
 
-  const getLatestAnalysis = (patientId: string) => {
-    const patientCheckins = checkins.filter(
-      (c) => c.patientId === patientId && c.analysis
-    );
-    return patientCheckins[patientCheckins.length - 1]?.analysis;
-  };
+  const selectedScored = rankedPatients.find(
+    (r) => r.patient.id === selectedPatientId
+  );
 
-  // ── Render ────────────────────────────────────────────────
+  // ── Error state ───────────────────────────────────────────
 
   if (error) {
     return <ErrorState message={error} onRetry={load} />;
   }
 
+  // ── Render ────────────────────────────────────────────────
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Clinical Dashboard
-          </h1>
-          <p className="section-subtitle mt-0.5">
-            Patient risk monitoring &amp; triage overview
-          </p>
+    <div className="h-[calc(100vh-2rem)] md:h-[calc(100vh-4rem)] flex flex-col">
+      {/* ── Top Bar: title + stats + actions ──────────────── */}
+      <div className="flex-shrink-0 mb-4">
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+              High-Risk Patient Dashboard
+            </h1>
+            <p className="text-xs text-clinical-muted mt-0.5">
+              AI-powered patient risk monitoring &amp; triage
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAddPatient(true)}
+              className="btn-secondary flex items-center gap-1.5 text-sm py-1.5 px-3"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              Add Patient
+            </button>
+            <Link
+              href="/checkin"
+              className="btn-primary flex items-center gap-1.5 text-sm py-1.5 px-3"
+            >
+              <Mic className="w-3.5 h-3.5" />
+              New Check-in
+            </Link>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowAddPatient(true)}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <UserPlus className="w-4 h-4" />
-            Add Patient
-          </button>
-          <Link
-            href="/checkin"
-            className="btn-primary flex items-center gap-2"
-          >
-            <Mic className="w-4 h-4" />
-            New Check-in
-          </Link>
+
+        {/* Stats strip */}
+        {loading ? (
+          <div className="grid grid-cols-4 gap-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="card py-2.5 px-3 flex items-center gap-2">
+                <Skeleton className="w-8 h-8 rounded-lg" />
+                <div className="space-y-1">
+                  <Skeleton className="h-5 w-8" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-2">
+            <MiniStatCard
+              icon={<Users className="w-4 h-4" />}
+              label="Monitored"
+              value={patients.length}
+              accent="bg-primary-50 text-primary-600"
+            />
+            <MiniStatCard
+              icon={<AlertTriangle className="w-4 h-4" />}
+              label="High Risk"
+              value={highRiskCount}
+              accent="bg-amber-50 text-amber-600"
+            />
+            <MiniStatCard
+              icon={<Flame className="w-4 h-4" />}
+              label="Emergencies"
+              value={emergencyCount}
+              accent="bg-red-50 text-red-600"
+            />
+            <MiniStatCard
+              icon={<Activity className="w-4 h-4" />}
+              label="Check-ins Today"
+              value={checkinsToday}
+              accent="bg-emerald-50 text-emerald-600"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ── Two-Panel Layout ─────────────────────────────── */}
+      <div className="flex-1 flex gap-4 min-h-0">
+        {/* LEFT PANEL — Patient List (35%) */}
+        <div className="w-[35%] flex-shrink-0 flex flex-col min-h-0">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+              <Flame className="w-4 h-4 text-red-500" />
+              Patients by Risk
+            </h2>
+            <span className="text-[11px] text-clinical-muted">
+              {rankedPatients.length} total
+            </span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1 pb-2">
+            {loading ? (
+              <>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <HighRiskCardSkeleton key={i} />
+                ))}
+              </>
+            ) : patients.length === 0 ? (
+              <div className="card">
+                <EmptyState
+                  icon={Users}
+                  title="No patients enrolled"
+                  description="Add patients to start monitoring."
+                />
+              </div>
+            ) : (
+              rankedPatients.map((scored, i) => (
+                <HighRiskPatientCard
+                  key={scored.patient.id}
+                  scoredPatient={scored}
+                  rank={i + 1}
+                  isSelected={scored.patient.id === selectedPatientId}
+                  onClick={() => setSelectedPatientId(scored.patient.id)}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT PANEL — Patient Detail (65%) */}
+        <div className="flex-1 min-h-0 overflow-y-auto rounded-xl border border-clinical-border bg-white p-5">
+          {loading ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-11 h-11 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-3 w-56" />
+                </div>
+              </div>
+              <Skeleton className="h-24 w-full rounded-lg" />
+              <Skeleton className="h-40 w-full rounded-lg" />
+            </div>
+          ) : !selectedScored ? (
+            <PatientDetailEmpty />
+          ) : (
+            <PatientDetailPanel
+              scored={selectedScored}
+              checkins={checkins}
+              onAcknowledge={handleAcknowledge}
+            />
+          )}
         </div>
       </div>
 
-      {/* Add Patient Modal */}
+      {/* ── Add Patient Modal ────────────────────────────── */}
       {showAddPatient && (
         <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-slate-900">Add New Patient</h2>
+              <h2 className="text-lg font-bold text-slate-900">
+                Add New Patient
+              </h2>
               <button
                 onClick={() => setShowAddPatient(false)}
                 className="text-slate-400 hover:text-slate-700"
@@ -256,254 +379,13 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-
-      {/* ── Stats Grid (risk-aware) ──────────────────────── */}
-      {loading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <StatCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard
-            icon={<Users className="w-5 h-5" />}
-            label="Patients Monitored"
-            value={patients.length}
-            accent="bg-primary-50 text-primary-600"
-          />
-          <StatCard
-            icon={<AlertTriangle className="w-5 h-5" />}
-            label="High Risk"
-            value={highRiskCount}
-            accent="bg-amber-50 text-amber-600"
-          />
-          <StatCard
-            icon={<Flame className="w-5 h-5" />}
-            label="Emergencies"
-            value={emergencyCount}
-            accent="bg-red-50 text-red-600"
-          />
-          <StatCard
-            icon={<Activity className="w-5 h-5" />}
-            label="Check-ins Today"
-            value={checkinsToday}
-            accent="bg-emerald-50 text-emerald-600"
-          />
-        </div>
-      )}
-
-      {/* ── Active Alerts ────────────────────────────────── */}
-      {loading ? (
-        <div className="card space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <AlertSkeleton key={i} />
-          ))}
-        </div>
-      ) : alerts.length > 0 ? (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="section-title flex items-center gap-2">
-              <Bell className="w-5 h-5 text-red-500" />
-              Active Alerts
-            </h2>
-            <span className="badge-danger">{alerts.length}</span>
-          </div>
-          <div className="space-y-2">
-            {alerts.map((alert) => {
-              const patient = patients.find((p) => p.id === alert.patientId);
-              const isRecent =
-                Date.now() - new Date(alert.createdAt).getTime() <
-                10 * 60 * 1000;
-              return (
-                <div
-                  key={alert.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
-                    alert.severity === "critical"
-                      ? "bg-red-50/60 border-red-200 border-l-4 border-l-red-500 alert-critical"
-                      : alert.severity === "high"
-                        ? "bg-amber-50/40 border-amber-200 border-l-4 border-l-amber-500"
-                        : "bg-slate-50/80 border-slate-100 hover:bg-slate-100/60"
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-medium text-sm text-slate-900 truncate">
-                        {patient?.name || alert.patientId}
-                      </span>
-                      <SeverityBadge severity={alert.severity} />
-                      {isRecent && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-500 text-white animate-pulse">
-                          New
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-slate-600 line-clamp-1">
-                      {alert.message}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleAcknowledge(alert.id)}
-                    className="btn-ghost text-xs flex-shrink-0"
-                  >
-                    Acknowledge
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
-
-      {/* ── High-Risk Patients (Top 5) ───────────────────── */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="section-title flex items-center gap-2">
-              <Flame className="w-5 h-5 text-red-500" />
-              High-Risk Patients
-            </h2>
-            <p className="section-subtitle mt-0.5">
-              Top 5 patients requiring immediate attention, ranked by urgency
-            </p>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <HighRiskCardSkeleton key={i} />
-            ))}
-          </div>
-        ) : patients.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title="No patients enrolled"
-            description="Patients will appear here once they are added to a trial."
-          />
-        ) : topFive.every((r) => r.riskTier === "low") ? (
-          <div className="card">
-            <EmptyState
-              icon={ShieldCheck}
-              title="All patients stable"
-              description="No high-risk patients detected. All patients are within safe parameters."
-            />
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {topFive.map((scored, i) => (
-              <HighRiskPatientCard
-                key={scored.patient.id}
-                scoredPatient={scored}
-                rank={i + 1}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── All Patients Grid ────────────────────────────── */}
-      <div>
-        <h2 className="section-title mb-3">All Patients</h2>
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <PatientCardSkeleton key={i} />
-            ))}
-          </div>
-        ) : patients.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title="No patients enrolled"
-            description="Patients will appear here once they are added to a trial."
-          />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {patients.map((patient) => {
-              const analysis = getLatestAnalysis(patient.id);
-              return (
-                <Link
-                  key={patient.id}
-                  href={`/patient/${patient.id}`}
-                  className="card-hover group"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-slate-900 truncate">
-                        {patient.name}
-                      </h3>
-                      <p className="text-sm text-clinical-muted">
-                        {patient.condition}
-                      </p>
-                    </div>
-                    <PatientStatusBadge status={patient.status} />
-                  </div>
-
-                  {analysis && (
-                    <div className="space-y-3 mt-3">
-                      <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed">
-                        {analysis.summary}
-                      </p>
-                      <div>
-                        <div className="text-[11px] font-medium text-clinical-muted uppercase tracking-wide mb-1">
-                          Dropout Risk
-                        </div>
-                        <DropoutRiskBar risk={analysis.dropoutRisk} />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                    <span className="text-xs text-clinical-muted">
-                      {patient.trialId}
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary-500 transition-colors" />
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* ── Symptom Trends ───────────────────────────────── */}
-      {!loading && summary && summary.symptomTrends.length > 0 && (
-        <div className="card">
-          <h2 className="section-title flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-primary-600" />
-            Symptom Trends
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {summary.symptomTrends.map((trend) => {
-              const latest =
-                trend.dataPoints.length > 0
-                  ? trend.dataPoints[trend.dataPoints.length - 1].avgSeverity
-                  : 0;
-              return (
-                <div
-                  key={trend.name}
-                  className="p-3 rounded-lg bg-slate-50 border border-slate-100"
-                >
-                  <div className="text-sm font-medium text-slate-700">
-                    {trend.name}
-                  </div>
-                  <div className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
-                    {latest.toFixed(1)}
-                  </div>
-                  <div className="text-[11px] text-clinical-muted font-medium uppercase tracking-wide">
-                    avg severity
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-function StatCard({
+// ── Mini Stat Card (compact for top strip) ──────────────────
+
+function MiniStatCard({
   icon,
   label,
   value,
@@ -515,17 +397,19 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <div className="card flex items-center gap-3">
+    <div className="card py-2.5 px-3 flex items-center gap-2.5">
       <div
-        className={`w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 ${accent}`}
+        className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${accent}`}
       >
         {icon}
       </div>
       <div>
-        <div className="text-2xl font-bold text-slate-900 tabular-nums">
+        <div className="text-lg font-bold text-slate-900 tabular-nums leading-tight">
           {value}
         </div>
-        <div className="text-xs text-clinical-muted font-medium">{label}</div>
+        <div className="text-[11px] text-clinical-muted font-medium leading-tight">
+          {label}
+        </div>
       </div>
     </div>
   );

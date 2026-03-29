@@ -1,9 +1,7 @@
-import Link from "next/link";
 import type { RiskScoredPatient, RiskTier } from "@/lib/risk-scoring";
 import { PatientStatusBadge } from "@/components/StatusBadge";
-import { DropoutRiskBar } from "@/components/DropoutRiskBar";
 import { InsightChip } from "@/components/InsightChip";
-import { ChevronRight, User } from "lucide-react";
+import { User } from "lucide-react";
 
 // ── Tier visual mapping ──────────────────────────────────────
 
@@ -33,77 +31,67 @@ const rankColor: Record<RiskTier, string> = {
 export function HighRiskPatientCard({
   scoredPatient,
   rank,
+  isSelected = false,
+  onClick,
 }: {
   scoredPatient: RiskScoredPatient;
   rank: number;
+  isSelected?: boolean;
+  onClick?: () => void;
 }) {
-  const { patient, analysis, riskTier, insightChips, compositeScore } =
-    scoredPatient;
+  const { patient, riskTier, insightChips, compositeScore } = scoredPatient;
 
   return (
-    <Link
-      href={`/patient/${patient.id}`}
-      className={`block card-hover border-l-4 ${tierBorder[riskTier]} ${tierBg[riskTier]} ${
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left rounded-xl border shadow-sm p-3.5 border-l-4 transition-all duration-150 cursor-pointer ${tierBorder[riskTier]} ${tierBg[riskTier]} ${
         riskTier === "critical" ? "alert-critical" : ""
-      } group`}
+      } ${
+        isSelected
+          ? "ring-2 ring-primary-500 shadow-md border-primary-300"
+          : "hover:shadow-md hover:border-slate-300/80"
+      }`}
     >
       {/* Top row: rank + name + status */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         {/* Rank circle */}
         <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${rankColor[riskTier]}`}
+          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${rankColor[riskTier]}`}
         >
           {rank}
         </div>
 
-        {/* Patient avatar */}
-        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-          <User className="w-4 h-4 text-slate-500" />
+        {/* Avatar */}
+        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+          <User className="w-3.5 h-3.5 text-slate-500" />
         </div>
 
         {/* Name + condition */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-slate-900 truncate text-sm">
+          <div className="flex items-center gap-1.5">
+            <h3 className="font-semibold text-slate-900 truncate text-sm leading-tight">
               {patient.name}
             </h3>
             <PatientStatusBadge status={patient.status} />
           </div>
-          <p className="text-xs text-clinical-muted truncate">
+          <p className="text-[11px] text-clinical-muted truncate">
             {patient.condition} &middot; Age {patient.age}
           </p>
         </div>
 
-        {/* Score + chevron */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-xs font-semibold text-clinical-muted tabular-nums">
-            {compositeScore}
-          </span>
-          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary-500 transition-colors" />
-        </div>
+        {/* Score */}
+        <span className="text-[11px] font-bold text-clinical-muted tabular-nums flex-shrink-0">
+          {compositeScore}
+        </span>
       </div>
 
       {/* Insight chips */}
-      <div className="flex flex-wrap items-center gap-1.5 mt-3 ml-11">
+      <div className="flex flex-wrap items-center gap-1 mt-2 ml-[4.25rem]">
         {insightChips.map((chip, i) => (
           <InsightChip key={i} label={chip.label} variant={chip.variant} />
         ))}
       </div>
-
-      {/* Bottom row: dropout risk + trial ID */}
-      {analysis && (
-        <div className="flex items-center gap-4 mt-3 ml-11">
-          <div className="flex-1 max-w-xs">
-            <div className="text-[10px] font-medium text-clinical-muted uppercase tracking-wider mb-0.5">
-              Dropout Risk
-            </div>
-            <DropoutRiskBar risk={analysis.dropoutRisk} />
-          </div>
-          <span className="text-[11px] text-clinical-muted flex-shrink-0">
-            {patient.trialId}
-          </span>
-        </div>
-      )}
-    </Link>
+    </button>
   );
 }
