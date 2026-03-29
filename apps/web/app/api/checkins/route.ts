@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { successResponse, errorResponse } from "@/lib/api-utils";
 import { mapCheckIn, mapAnalysis } from "@/lib/db-mappers";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const supabase = await createClient();
   const {
