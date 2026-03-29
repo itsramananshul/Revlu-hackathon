@@ -20,17 +20,20 @@ import {
   BarChart3,
   Search,
   UserPlus,
+  MessageSquare,
 } from "lucide-react";
 
 const clinicianNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/checkin", label: "New Check-in", icon: Mic },
+  { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/settings", label: "Settings", icon: ShieldCheck },
 ];
 
 const patientNav = [
   { href: "/checkin", label: "Voice Check-in", icon: Mic },
   { href: "/medication-scan", label: "Medication Scanner", icon: Pill },
+  { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/browse", label: "Browse Diseases", icon: Search },
   { href: "/settings", label: "Settings", icon: ShieldCheck },
 ];
@@ -40,6 +43,7 @@ const superNav = [
   { href: "/super/assign-patient", label: "Assign Patient", icon: UserPlus },
   { href: "/dashboard", label: "Doctor Dashboard", icon: LayoutDashboard },
   { href: "/checkin", label: "New Check-in", icon: Mic },
+  { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/settings", label: "Settings", icon: ShieldCheck },
 ];
 

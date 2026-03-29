@@ -43,7 +43,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     }
 
     // Patient can only access /checkin, /settings, and /medication-scan
-    const patientAllowed = ["/checkin", "/settings", "/medication-scan", "/browse"];
+    const patientAllowed = ["/checkin", "/settings", "/medication-scan", "/browse", "/messages"];
     if (
       role === "patient" &&
       !patientAllowed.some((p) => pathname.startsWith(p))

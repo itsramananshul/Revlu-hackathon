@@ -141,4 +141,17 @@ export const api = {
     }
     return json.data;
   },
+
+  // Messages
+  getContacts: () =>
+    request<{ id: string; name: string; email: string; role: string }[]>("/messages/contacts"),
+  getMessages: (withUserId: string) =>
+    request<{ id: string; senderId: string; receiverId: string; content: string; isRead: boolean; createdAt: string; isMine: boolean }[]>(
+      `/messages?with=${withUserId}`
+    ),
+  sendMessage: (receiverId: string, content: string) =>
+    request<{ id: string; senderId: string; receiverId: string; content: string; createdAt: string; isMine: boolean }>(
+      "/messages",
+      { method: "POST", body: JSON.stringify({ receiverId, content }) }
+    ),
 };
