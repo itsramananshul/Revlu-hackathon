@@ -11,9 +11,10 @@ import {
   MicOff,
   CheckCircle2,
   ArrowRight,
+  Mail,
 } from "lucide-react";
 
-type Step = "credentials" | "voice-setup" | "done";
+type Step = "credentials" | "verify-email" | "voice-setup" | "done";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -63,17 +64,20 @@ export default function SignUpPage() {
         return;
       }
 
-      // Set session if returned
-      if (json.data?.session) {
+      setLoading(false);
+
+      // If email verification required, show verify screen
+      if (json.data?.requiresVerification) {
+        setStep("verify-email");
+      } else if (json.data?.session) {
+        // Legacy: if session returned, set it and go to voice setup
         const supabase = createClient();
         await supabase.auth.setSession({
           access_token: json.data.session.access_token,
           refresh_token: json.data.session.refresh_token,
         });
+        setStep("voice-setup");
       }
-
-      setLoading(false);
-      setStep("voice-setup");
     } catch {
       setError("Failed to create account");
       setLoading(false);
@@ -286,6 +290,36 @@ export default function SignUpPage() {
             Sign in
           </Link>
         </p>
+      </div>
+    );
+  }
+
+  // Verify email
+  if (step === "verify-email") {
+    return (
+      <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8 text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-100 mb-5">
+          <Mail className="w-8 h-8 text-primary-600" />
+        </div>
+        <h2 className="text-xl font-semibold text-slate-900 mb-2">
+          Check your email
+        </h2>
+        <p className="text-sm text-clinical-muted mb-2">
+          We sent a verification link to:
+        </p>
+        <p className="text-sm font-semibold text-slate-900 mb-6">
+          {email}
+        </p>
+        <p className="text-xs text-clinical-muted mb-6">
+          Click the link in the email to verify your account, then come back and sign in.
+        </p>
+        <Link
+          href="/login"
+          className="btn-primary inline-flex items-center gap-2 px-6"
+        >
+          Go to Sign In
+          <ArrowRight className="w-4 h-4" />
+        </Link>
       </div>
     );
   }

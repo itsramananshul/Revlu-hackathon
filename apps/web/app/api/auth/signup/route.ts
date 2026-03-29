@@ -56,20 +56,24 @@ export async function POST(request: Request) {
     );
   }
 
-  // Create auth user (service role bypasses email confirmation)
+  // Create auth user with email verification required
   let authUser;
   try {
     const { data, error } = await supabase.auth.admin.createUser({
       email: email.toLowerCase(),
       password,
-      email_confirm: true, // Auto-confirm so they can sign in immediately
+      email_confirm: false, // Require email verification
       user_metadata: { full_name: name || undefined },
     });
 
     if (error) {
       // If admin API not available, fall back to regular signup
       const { data: fallbackData, error: fallbackError } =
-        await supabase.auth.signUp({ email, password });
+        await supabase.auth.signUp({
+          email: email.toLowerCase(),
+          password,
+          options: { data: { full_name: name || undefined } },
+        });
       if (fallbackError) {
         return NextResponse.json(
           { success: false, message: fallbackError.message },
@@ -79,6 +83,15 @@ export async function POST(request: Request) {
       authUser = fallbackData.user;
     } else {
       authUser = data.user;
+
+      // Send verification email via magic link
+      const { error: linkError } = await supabase.auth.admin.generateLink({
+        type: "magiclink" as any,
+        email: email.toLowerCase(),
+      });
+      if (linkError) {
+        console.warn("[Signup] Could not send verification email:", linkError.message);
+      }
     }
   } catch {
     return NextResponse.json(
@@ -99,7 +112,6 @@ export async function POST(request: Request) {
 
   if (insertError) {
     console.error("[Signup] app_users insert error:", insertError.message);
-    // Don't fail signup if this fails — auth user is created
   }
 
   // If role is patient, also create a patient record
@@ -123,24 +135,10 @@ export async function POST(request: Request) {
     }
   }
 
-  // Sign the user in to get a session
-  const { data: signInData, error: signInError } =
-    await supabase.auth.signInWithPassword({
-      email: email.toLowerCase(),
-      password,
-    });
-
-  if (signInError) {
-    return NextResponse.json({
-      success: true,
-      message: "Account created. Please sign in.",
-      data: { session: null },
-    });
-  }
-
+  // Do NOT auto-sign-in — user must verify email first
   return NextResponse.json({
     success: true,
-    message: "Account created",
-    data: { session: signInData.session },
+    message: "Account created. Please check your email to verify.",
+    data: { session: null, requiresVerification: true },
   });
 }
