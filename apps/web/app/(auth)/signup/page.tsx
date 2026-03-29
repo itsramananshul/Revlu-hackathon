@@ -23,6 +23,8 @@ export default function SignUpPage() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [age, setAge] = useState("");
+  const [condition, setCondition] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -45,7 +47,13 @@ export default function SignUpPage() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name: `${firstName.trim()} ${lastName.trim()}`.trim() }),
+        body: JSON.stringify({
+          email,
+          password,
+          name: `${firstName.trim()} ${lastName.trim()}`.trim(),
+          age: age ? Number(age) : undefined,
+          condition: condition.trim() || undefined,
+        }),
       });
       const json = await res.json();
 
@@ -231,6 +239,36 @@ export default function SignUpPage() {
               className="input"
               placeholder="Minimum 6 characters"
             />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="age" className="block text-sm font-medium text-slate-700 mb-1.5">
+                Age
+              </label>
+              <input
+                id="age"
+                type="number"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                className="input"
+                placeholder="e.g. 34"
+                min={1}
+                max={120}
+              />
+            </div>
+            <div>
+              <label htmlFor="condition" className="block text-sm font-medium text-slate-700 mb-1.5">
+                Medical Condition
+              </label>
+              <input
+                id="condition"
+                type="text"
+                value={condition}
+                onChange={(e) => setCondition(e.target.value)}
+                className="input"
+                placeholder="e.g. Type 2 Diabetes"
+              />
+            </div>
           </div>
           <button
             type="submit"

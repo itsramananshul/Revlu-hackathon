@@ -136,7 +136,7 @@ export default function RoleSelectionPage() {
               <Shield className="w-6 h-6 text-purple-600" />
             </div>
             <h2 className="text-lg font-bold text-slate-900 mb-1">
-              Super Doctor
+              Lead Doctor
             </h2>
             <p className="text-sm text-slate-500">
               Oversee all doctors &amp; trial analytics

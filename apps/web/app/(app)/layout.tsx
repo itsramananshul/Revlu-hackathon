@@ -51,7 +51,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       router.replace("/checkin");
     }
 
-    // Super doctor can access everything — no restrictions
+    // Lead doctor can access everything — no restrictions
     // Regular clinician cannot access /super
     if (role === "clinician" && pathname.startsWith("/super")) {
       router.replace("/dashboard");

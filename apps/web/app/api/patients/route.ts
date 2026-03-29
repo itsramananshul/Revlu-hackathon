@@ -20,14 +20,11 @@ export async function GET() {
 
   let query = supabase.from("patients").select("*");
 
-  if (role === "clinician") {
-    // Clinician sees only their linked patients
-    query = query.eq("doctor_id", user.id);
-  } else if (role === "patient") {
+  if (role === "patient") {
     // Patient sees only their own record
     query = query.eq("user_id", user.id);
   }
-  // super sees all — no filter
+  // Clinician and super see all patients
 
   const { data, error } = await query.order("created_at", { ascending: true });
 
@@ -53,6 +50,15 @@ export async function POST(request: Request) {
     );
   }
 
+  // Look up role to decide how to link the patient
+  const { data: appUser } = await supabase
+    .from("app_users")
+    .select("role")
+    .eq("auth_id", user.id)
+    .maybeSingle();
+
+  const isPatientRole = appUser?.role === "patient";
+
   const { data, error } = await supabase
     .from("patients")
     .insert({
@@ -61,7 +67,9 @@ export async function POST(request: Request) {
       condition,
       trial_id: trialId,
       status: "active",
-      user_id: user.id,
+      // Patient creating their own record → link via user_id
+      // Clinician creating a patient → no user_id (patient hasn't signed up)
+      ...(isPatientRole ? { user_id: user.id } : {}),
     })
     .select()
     .single();

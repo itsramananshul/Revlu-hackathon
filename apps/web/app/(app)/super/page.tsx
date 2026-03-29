@@ -8,6 +8,7 @@ import { generateSmartAlerts } from "@/lib/alert-engine";
 import { computeCohortMetrics } from "@/lib/cohort-analytics";
 import { predictDropoutRisk } from "@/lib/dropout-risk";
 import { recordAuditEvent } from "@/lib/security/audit";
+import { MOCK_DOCTORS, type Doctor } from "@/data/mock-doctors";
 import { HighRiskPatientCard } from "@/components/HighRiskPatientCard";
 import { SmartAlertBar } from "@/components/SmartAlertBar";
 import { Skeleton } from "@/components/Skeleton";
@@ -30,51 +31,7 @@ import {
   XCircle,
 } from "lucide-react";
 
-// ── Mock doctor data (would come from DB in production) ─────
-
-interface Doctor {
-  id: string;
-  name: string;
-  specialty: string;
-  patientCount: number;
-  avgResponseTime: string;
-  unresolvedAlerts: number;
-  dropoutRate: number;
-  status: "active" | "busy" | "offline";
-}
-
-const MOCK_DOCTORS: Doctor[] = [
-  {
-    id: "doc-1",
-    name: "Dr. Sarah Mitchell",
-    specialty: "Oncology",
-    patientCount: 3,
-    avgResponseTime: "12 min",
-    unresolvedAlerts: 2,
-    dropoutRate: 8.5,
-    status: "active",
-  },
-  {
-    id: "doc-2",
-    name: "Dr. James Park",
-    specialty: "Rheumatology",
-    patientCount: 2,
-    avgResponseTime: "28 min",
-    unresolvedAlerts: 4,
-    dropoutRate: 15.2,
-    status: "busy",
-  },
-  {
-    id: "doc-3",
-    name: "Dr. Priya Sharma",
-    specialty: "Cardiology",
-    patientCount: 0,
-    avgResponseTime: "8 min",
-    unresolvedAlerts: 0,
-    dropoutRate: 3.1,
-    status: "active",
-  },
-];
+// ── Doctor data imported from shared mock ────────────────────
 
 const statusColor = {
   active: "bg-emerald-500",
@@ -176,7 +133,7 @@ export default function SuperDoctorPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Shield className="w-5 h-5 text-purple-600" />
-            Super Doctor Command Center
+            Lead Doctor Command Center
           </h1>
           <p className="text-xs text-clinical-muted mt-0.5">
             Global oversight &bull; All doctors &bull; All patients &bull;

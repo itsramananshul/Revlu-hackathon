@@ -19,6 +19,7 @@ import {
   Shield,
   BarChart3,
   Search,
+  UserPlus,
 } from "lucide-react";
 
 const clinicianNav = [
@@ -36,6 +37,7 @@ const patientNav = [
 
 const superNav = [
   { href: "/super", label: "Command Center", icon: Shield },
+  { href: "/super/assign-patient", label: "Assign Patient", icon: UserPlus },
   { href: "/dashboard", label: "Doctor Dashboard", icon: LayoutDashboard },
   { href: "/checkin", label: "New Check-in", icon: Mic },
   { href: "/settings", label: "Voice Phrase", icon: ShieldCheck },
@@ -130,7 +132,7 @@ export function Sidebar({ role }: { role: "patient" | "clinician" | "super" }) {
           ) : (
             <Users className="w-3.5 h-3.5" />
           )}
-          {role === "patient" ? "Patient Mode" : role === "super" ? "Super Doctor" : "Doctor Mode"}
+          {role === "patient" ? "Patient Mode" : role === "super" ? "Lead Doctor" : "Doctor Mode"}
         </div>
       </div>
 
