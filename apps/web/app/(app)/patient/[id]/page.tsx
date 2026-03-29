@@ -16,6 +16,7 @@ import { ErrorState } from "@/components/ErrorState";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/Skeleton";
 import { toast } from "sonner";
+import { MedicationScanner } from "@/components/MedicationScanner";
 import {
   ArrowLeft,
   User,
@@ -261,6 +262,9 @@ export default function PatientDetailPage() {
           />
         </div>
       )}
+
+      {/* Medication Scanner */}
+      <MedicationScanner />
 
       {/* Check-in History */}
       <div className="card">

@@ -15,6 +15,7 @@ import {
   Users,
   Heart,
   ShieldCheck,
+  Pill,
 } from "lucide-react";
 
 const clinicianNav = [
@@ -25,6 +26,7 @@ const clinicianNav = [
 
 const patientNav = [
   { href: "/checkin", label: "Voice Check-in", icon: Mic },
+  { href: "/medication-scan", label: "Medication Scanner", icon: Pill },
   { href: "/settings", label: "Voice Phrase", icon: ShieldCheck },
 ];
 

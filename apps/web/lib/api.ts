@@ -86,6 +86,26 @@ export const api = {
   getAnalyticsSummary: () =>
     request<import("@trialpulse/types").AnalyticsSummary>("/analytics/summary"),
 
+  // Medication Scanner
+  scanMedication: (image: string, mimeType: string) =>
+    request<{
+      ocrTexts: string[];
+      metadata: {
+        drugName: string;
+        score: number;
+        strength: string;
+        quantity: string;
+        expiry: string;
+        fdaContext: string | null;
+      };
+      advice: string;
+      auditPassed: boolean;
+      auditReason: string;
+    }>("/medication-scan", {
+      method: "POST",
+      body: JSON.stringify({ image, mimeType }),
+    }),
+
   // Voice Verification
   verifyVoice: async (
     audioFile: File,
