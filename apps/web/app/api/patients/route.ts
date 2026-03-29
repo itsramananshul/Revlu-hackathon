@@ -9,26 +9,36 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return errorResponse("Unauthorized", 401);
 
-  // Determine role: check user_metadata first (set by role selection), then app_users table
-  const metaRole = user.user_metadata?.voxvitals_role;
+  // Determine role — try multiple sources
+  const metaRole = user.user_metadata?.voxvitals_role; // set by role selection UI
+  let role: string | null = metaRole || null;
 
-  let role = metaRole || null;
   if (!role) {
+    // Fallback: check if user has a patient record (= they're a patient)
+    const { data: ownPatient } = await supabase
+      .from("patients")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    // If they have a patient record, they might be a patient
+    // But for demo safety: only restrict if app_users says "patient"
     const { data: appUser } = await supabase
       .from("app_users")
       .select("role")
       .eq("auth_id", user.id)
       .maybeSingle();
-    role = appUser?.role || "patient";
+
+    // Only filter if BOTH: app_users says patient AND they have a patient record
+    role = (appUser?.role === "patient" && ownPatient) ? "patient" : "clinician";
   }
 
   let query = supabase.from("patients").select("*");
 
   if (role === "patient") {
-    // Patient sees only their own record
     query = query.eq("user_id", user.id);
   }
-  // Clinician and super see all patients
+  // Doctors, clinicians, and lead doctors see all patients
 
   const { data, error } = await query.order("created_at", { ascending: true });
 
