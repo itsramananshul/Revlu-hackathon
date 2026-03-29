@@ -16,6 +16,7 @@ import {
   Mic,
   MicOff,
   Minimize2,
+  FileText,
 } from "lucide-react";
 
 // ── Types ───────────────────────────────────────────────────
@@ -63,6 +64,7 @@ export function AICompanionWidget({ patient }: { patient: Patient | null }) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pendingSymptom, setPendingSymptom] = useState<string | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll
@@ -189,6 +191,34 @@ export function AICompanionWidget({ patient }: { patient: Patient | null }) {
     }
   };
 
+  // ── Summarize conversation ──────────────────────────────
+
+  const handleSummarize = async () => {
+    if (messages.length < 3) return; // Need at least a few messages
+    setSummarizing(true);
+    try {
+      const history = messages
+        .filter((m) => m.role !== "system" && m.id !== "welcome")
+        .map((m) => ({
+          role: m.role === "patient" ? "user" : "assistant",
+          content: m.content,
+        }));
+      const result = await api.summarizeConversation(history);
+      const summaryMsg: ChatMessage = {
+        id: `summary-${Date.now()}`,
+        role: "assistant",
+        content: `📋 **Conversation Summary:**\n${result.summary}`,
+        timestamp: new Date().toISOString(),
+        metadata: { provider: result.provider },
+      };
+      setMessages((prev) => [...prev, summaryMsg]);
+    } catch {
+      // Silently fail — not critical
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
   // ── Render ──────────────────────────────────────────────
 
   if (!isOpen) {
@@ -216,12 +246,28 @@ export function AICompanionWidget({ patient }: { patient: Patient | null }) {
             </div>
           </div>
         </div>
-        <button
-          onClick={() => setIsOpen(false)}
-          className="w-7 h-7 rounded-lg hover:bg-white/20 flex items-center justify-center transition-colors"
-        >
-          <Minimize2 className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          {messages.length > 3 && (
+            <button
+              onClick={handleSummarize}
+              disabled={summarizing}
+              className="w-7 h-7 rounded-lg hover:bg-white/20 flex items-center justify-center transition-colors"
+              title="Summarize conversation"
+            >
+              {summarizing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <FileText className="w-3.5 h-3.5" />
+              )}
+            </button>
+          )}
+          <button
+            onClick={() => setIsOpen(false)}
+            className="w-7 h-7 rounded-lg hover:bg-white/20 flex items-center justify-center transition-colors"
+          >
+            <Minimize2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* ── Disclaimer ─────────────────────────────────── */}

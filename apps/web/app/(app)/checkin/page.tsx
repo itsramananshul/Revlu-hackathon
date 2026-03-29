@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
 import { VoiceVerification } from "@/components/VoiceVerification";
 import { PatientDailyCheckIn } from "@/components/PatientDailyCheckIn";
+import { PassiveMonitor } from "@/components/PassiveMonitor";
 import { toast } from "sonner";
 import {
   Mic,
@@ -60,7 +61,12 @@ export default function CheckInPage() {
 
   // ── Patient mode: show guided daily check-in ──────────
   if (role === "patient" && patientRecord) {
-    return <PatientDailyCheckIn patient={patientRecord} />;
+    return (
+      <div className="max-w-2xl mx-auto space-y-6 pb-8">
+        <PatientDailyCheckIn patient={patientRecord} />
+        <PassiveMonitor />
+      </div>
+    );
   }
 
   if (role === "patient" && !patientRecord) {

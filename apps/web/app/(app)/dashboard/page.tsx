@@ -125,18 +125,36 @@ export default function DashboardPage() {
     load();
   }, [load]);
 
-  // Poll for new alerts every 30s (emergency alerts need fast visibility)
+  // Poll for new alerts every 15s (emergency alerts need fast visibility)
   useEffect(() => {
     if (loading) return;
-    const interval = setInterval(async () => {
+    const alertInterval = setInterval(async () => {
       try {
         const freshAlerts = await api.getUnacknowledgedAlerts();
         setAlerts(freshAlerts);
       } catch {
         // Silent fail — don't disrupt the UI
       }
-    }, 30_000);
-    return () => clearInterval(interval);
+    }, 15_000);
+
+    // Full data refresh every 60s (check-ins, patients)
+    const fullInterval = setInterval(async () => {
+      try {
+        const [p, c] = await Promise.all([
+          api.getPatients(),
+          api.getCheckIns(),
+        ]);
+        setPatients(p);
+        setCheckins(c);
+      } catch {
+        // Silent fail
+      }
+    }, 60_000);
+
+    return () => {
+      clearInterval(alertInterval);
+      clearInterval(fullInterval);
+    };
   }, [loading]);
 
   const handleAcknowledge = async (alertId: string) => {

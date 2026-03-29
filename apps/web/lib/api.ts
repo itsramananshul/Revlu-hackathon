@@ -72,6 +72,11 @@ export const api = {
     }),
   getProviderStatus: () =>
     request<{ ai: string; tts: string }>("/ai/status"),
+  summarizeConversation: (messages: { role: string; content: string }[]) =>
+    request<{ summary: string; provider: string }>("/ai/summarize", {
+      method: "POST",
+      body: JSON.stringify({ messages }),
+    }),
 
   // Alerts
   getAlerts: () => request<import("@trialpulse/types").Alert[]>("/alerts"),

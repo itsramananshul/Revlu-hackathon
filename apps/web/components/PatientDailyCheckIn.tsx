@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { api } from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
 import type { Patient } from "@trialpulse/types";
@@ -295,6 +295,40 @@ export function PatientDailyCheckIn({
   const allMedsAnswered = medications.every((m) => m.taken !== null);
   const allMedsTaken = medications.every((m) => m.taken === true);
 
+  // Persistent streak tracking via localStorage
+  const getStreak = (): number => {
+    try {
+      const data = JSON.parse(localStorage.getItem("voxvitals-med-streak") || "{}");
+      const today = new Date().toDateString();
+      const yesterday = new Date(Date.now() - 86400000).toDateString();
+      if (data.lastDate === today) return data.count ?? 0;
+      if (data.lastDate === yesterday) return data.count ?? 0;
+      return 0; // streak broken
+    } catch {
+      return 0;
+    }
+  };
+
+  const updateStreak = (tookAll: boolean) => {
+    try {
+      const today = new Date().toDateString();
+      const prev = JSON.parse(localStorage.getItem("voxvitals-med-streak") || "{}");
+      if (prev.lastDate === today) return; // Already logged today
+      const yesterday = new Date(Date.now() - 86400000).toDateString();
+      const streak = tookAll
+        ? (prev.lastDate === yesterday ? (prev.count ?? 0) + 1 : 1)
+        : 0;
+      localStorage.setItem("voxvitals-med-streak", JSON.stringify({ count: streak, lastDate: today }));
+    } catch { /* ignore */ }
+  };
+
+  // Update streak when submitted
+  useEffect(() => {
+    if (submitted) updateStreak(allMedsTaken);
+  }, [submitted]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const streakCount = getStreak();
+
   // ── Success state ───────────────────────────────────────
 
   if (submitted) {
@@ -323,9 +357,16 @@ export function PatientDailyCheckIn({
         </p>
 
         {allMedsTaken && (
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200 text-sm font-medium text-emerald-700 mb-6">
-            <Sparkles className="w-4 h-4" />
-            Great job staying on track with your medication!
+          <div className="space-y-2 mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200 text-sm font-medium text-emerald-700">
+              <Sparkles className="w-4 h-4" />
+              Great job staying on track with your medication!
+            </div>
+            {streakCount > 0 && (
+              <div className="text-sm text-amber-600 font-semibold">
+                🔥 {streakCount} day streak!
+              </div>
+            )}
           </div>
         )}
 
