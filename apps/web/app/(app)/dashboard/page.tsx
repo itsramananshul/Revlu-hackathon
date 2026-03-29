@@ -125,6 +125,20 @@ export default function DashboardPage() {
     load();
   }, [load]);
 
+  // Poll for new alerts every 30s (emergency alerts need fast visibility)
+  useEffect(() => {
+    if (loading) return;
+    const interval = setInterval(async () => {
+      try {
+        const freshAlerts = await api.getUnacknowledgedAlerts();
+        setAlerts(freshAlerts);
+      } catch {
+        // Silent fail — don't disrupt the UI
+      }
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [loading]);
+
   const handleAcknowledge = async (alertId: string) => {
     try {
       await api.acknowledgeAlert(alertId);

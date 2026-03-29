@@ -81,6 +81,11 @@ export const api = {
     request<import("@trialpulse/types").Alert>(`/alerts/${id}/acknowledge`, {
       method: "PATCH",
     }),
+  triggerEmergencyAlert: (patientId: string, note?: string) =>
+    request<import("@trialpulse/types").Alert>("/emergency-alert", {
+      method: "POST",
+      body: JSON.stringify({ patientId, note }),
+    }),
 
   // Analytics
   getAnalyticsSummary: () =>

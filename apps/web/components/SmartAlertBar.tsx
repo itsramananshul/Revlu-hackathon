@@ -18,6 +18,7 @@ const typeIcon: Record<SmartAlertType, React.ComponentType<{ className?: string 
   distress_signal: Zap,
   adverse_reaction: ShieldAlert,
   dropout_warning: LogOut,
+  emergency: ShieldAlert,
 };
 
 const severityColor: Record<SmartAlertSeverity, string> = {

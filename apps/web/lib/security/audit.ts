@@ -10,7 +10,9 @@ export type AuditAction =
   | "alert_acknowledged"
   | "simulation_generated"
   | "simulation_cleared"
-  | "cohort_insights_viewed";
+  | "cohort_insights_viewed"
+  | "emergency_alert_triggered"
+  | "emergency_alert_resolved";
 
 export interface AuditEvent {
   id: string;

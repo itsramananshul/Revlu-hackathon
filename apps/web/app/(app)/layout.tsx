@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { AICompanionWidget } from "@/components/AICompanionWidget";
+import { EmergencyButton } from "@/components/EmergencyButton";
+import { api } from "@/lib/api";
 
 type Role = "patient" | "clinician" | null;
 
@@ -12,12 +14,23 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [role, setRole] = useState<Role>(null);
   const [ready, setReady] = useState(false);
+  const [patientId, setPatientId] = useState<string | null>(null);
 
   // Read role on mount AND on every pathname change
   useEffect(() => {
     const stored = localStorage.getItem("voxvitals-role") as Role;
     setRole(stored);
     setReady(true);
+
+    // Resolve patient ID for emergency button
+    if (stored === "patient" && !patientId) {
+      api
+        .getPatients()
+        .then((pts) => {
+          if (pts.length > 0) setPatientId(pts[0].id);
+        })
+        .catch(() => {});
+    }
   }, [pathname]);
 
   // Handle redirects
@@ -62,6 +75,9 @@ function AppContent({ children }: { children: React.ReactNode }) {
       <Sidebar role={role} />
       <main className="flex-1 md:ml-64 p-4 md:p-8">{children}</main>
       {role === "patient" && <AICompanionWidget patient={null} />}
+      {role === "patient" && patientId && (
+        <EmergencyButton patientId={patientId} />
+      )}
     </div>
   );
 }

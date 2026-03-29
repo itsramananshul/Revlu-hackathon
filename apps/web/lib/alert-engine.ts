@@ -10,7 +10,8 @@ export type SmartAlertType =
   | "engagement_drop"
   | "distress_signal"
   | "adverse_reaction"
-  | "dropout_warning";
+  | "dropout_warning"
+  | "emergency";
 
 export type SmartAlertSeverity = "high" | "medium" | "low";
 
@@ -326,6 +327,24 @@ export function generateSmartAlerts(
 
     const dropout = detectDropoutWarning(patient, analysis);
     if (dropout) smartAlerts.push(dropout);
+  }
+
+  // Inject emergency alerts from DB (type === "emergency", unacknowledged)
+  const emergencyAlerts = alerts.filter(
+    (a) => a.type === "emergency" && !a.acknowledged
+  );
+  for (const ea of emergencyAlerts) {
+    const patient = patients.find((p) => p.id === ea.patientId);
+    smartAlerts.push({
+      id: `emergency-${ea.id}`,
+      patientId: ea.patientId,
+      patientName: patient?.name ?? "Unknown",
+      type: "emergency",
+      severity: "high",
+      title: "🚨 EMERGENCY: Patient needs immediate attention",
+      description: ea.message,
+      timestamp: ea.createdAt,
+    });
   }
 
   // Sort by severity (high first), then by timestamp (newest first)

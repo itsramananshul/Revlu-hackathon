@@ -75,7 +75,8 @@ export type AlertType =
   | "adverse_event"
   | "high_dropout_risk"
   | "medication_nonadherence"
-  | "symptom_escalation";
+  | "symptom_escalation"
+  | "emergency";
 
 export type AlertSeverity = "low" | "medium" | "high" | "critical";
 
