@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
   Loader2,
-  UserPlus,
   Mic,
   MicOff,
   CheckCircle2,
@@ -20,13 +19,11 @@ export default function SignUpPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("credentials");
 
-  // Step 1: credentials
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Step 2: voice phrase
   const [phrase, setPhrase] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -34,59 +31,43 @@ export default function SignUpPage() {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<any>(null);
-  const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Step 1: Create account
+  // Step 1: Create account via server route
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const json = await res.json();
+
+      if (!json.success) {
+        setError(json.message);
+        setLoading(false);
+        return;
+      }
+
+      // Set session if returned
+      if (json.data?.session) {
+        const supabase = createClient();
+        await supabase.auth.setSession({
+          access_token: json.data.session.access_token,
+          refresh_token: json.data.session.refresh_token,
+        });
+      }
+
       setLoading(false);
-      return;
-    }
-
-    const supabase = createClient();
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (signUpError) {
-      setError(signUpError.message);
+      setStep("voice-setup");
+    } catch {
+      setError("Failed to create account");
       setLoading(false);
-      return;
     }
-
-    // Auto sign in after signup
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError) {
-      toast.info("Check your email to confirm, then sign in.");
-      setLoading(false);
-      setStep("done");
-      return;
-    }
-
-    // Create app_users row for this user
-    if (signInData?.user) {
-      await supabase.from("app_users").upsert(
-        {
-          auth_id: signInData.user.id,
-          email: email.toLowerCase(),
-        },
-        { onConflict: "email" }
-      );
-    }
-
-    setLoading(false);
-    setStep("voice-setup");
   };
 
   // Step 2: Record voice phrase
@@ -104,17 +85,13 @@ export default function SignUpPage() {
         });
         const mediaRecorder = new MediaRecorder(stream);
         mediaRecorderRef.current = mediaRecorder;
-        chunksRef.current = [];
 
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) chunksRef.current.push(e.data);
-        };
+        mediaRecorder.ondataavailable = () => {};
         mediaRecorder.onstop = () => {
           stream.getTracks().forEach((t) => t.stop());
         };
         mediaRecorder.start();
 
-        // Speech recognition for live transcription
         const SR =
           (window as any).SpeechRecognition ||
           (window as any).webkitSpeechRecognition;
@@ -150,14 +127,12 @@ export default function SignUpPage() {
     }
   };
 
-  // Save phrase
   const handleSavePhrase = async () => {
     if (!phrase.trim()) {
       toast.error("Please record or type your voice phrase");
       return;
     }
     setSavingPhrase(true);
-
     try {
       const res = await fetch("/api/auth/set-phrase", {
         method: "POST",
@@ -165,13 +140,11 @@ export default function SignUpPage() {
         body: JSON.stringify({ phrase: phrase.trim() }),
       });
       const json = await res.json();
-
       if (!json.success) {
-        toast.error(json.message || "Failed to save phrase");
+        toast.error(json.message || "Failed to save");
         setSavingPhrase(false);
         return;
       }
-
       toast.success("Voice phrase saved!");
       setStep("done");
     } catch {
@@ -181,7 +154,7 @@ export default function SignUpPage() {
     }
   };
 
-  // Step 1: Credentials form
+  // Step 1
   if (step === "credentials") {
     return (
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8">
@@ -198,7 +171,6 @@ export default function SignUpPage() {
               {error}
             </div>
           )}
-
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
               Email
@@ -213,7 +185,6 @@ export default function SignUpPage() {
               placeholder="you@example.com"
             />
           </div>
-
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">
               Password
@@ -229,17 +200,12 @@ export default function SignUpPage() {
               placeholder="Minimum 6 characters"
             />
           </div>
-
           <button
             type="submit"
             disabled={loading}
             className="w-full btn-primary flex items-center justify-center gap-2 py-2.5"
           >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <ArrowRight className="w-4 h-4" />
-            )}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
             {loading ? "Creating..." : "Continue"}
           </button>
         </form>
@@ -254,7 +220,7 @@ export default function SignUpPage() {
     );
   }
 
-  // Step 2: Voice phrase setup
+  // Step 2
   if (step === "voice-setup") {
     return (
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8">
@@ -262,16 +228,15 @@ export default function SignUpPage() {
           Set Your Voice Phrase
         </h2>
         <p className="text-sm text-clinical-muted mb-6">
-          Step 2 of 2 — Choose a unique phrase for voice sign-in
+          Step 2 of 2 — Choose a phrase for voice sign-in
         </p>
 
         <div className="p-3 rounded-lg bg-primary-50 border border-primary-200 text-sm text-primary-800 mb-5">
-          Say a memorable phrase (e.g., &ldquo;Blue Mango Seven&rdquo;). You&apos;ll use
-          this to sign in with your voice.
+          Say a memorable phrase (e.g., &ldquo;Blue Mango Seven&rdquo;). You&apos;ll
+          use this to sign in with your voice.
         </div>
 
         <div className="space-y-4">
-          {/* Record button */}
           <div className="flex justify-center">
             <button
               onClick={handleRecord}
@@ -289,16 +254,11 @@ export default function SignUpPage() {
             </button>
           </div>
           <p className="text-center text-sm text-slate-500">
-            {isRecording
-              ? `Recording... ${recordingTime}s — tap to stop`
-              : "Tap to record your phrase"}
+            {isRecording ? `Recording... ${recordingTime}s — tap to stop` : "Tap to record your phrase"}
           </p>
 
-          {/* Phrase input */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Your Phrase
-            </label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Your Phrase</label>
             <input
               type="text"
               value={phrase}
@@ -313,19 +273,13 @@ export default function SignUpPage() {
             disabled={!phrase.trim() || savingPhrase}
             className="w-full btn-primary flex items-center justify-center gap-2 py-2.5"
           >
-            {savingPhrase ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <CheckCircle2 className="w-4 h-4" />
-            )}
+            {savingPhrase ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
             {savingPhrase ? "Saving..." : "Save Voice Phrase"}
           </button>
 
           <button
             onClick={() => {
               setStep("done");
-              router.push("/");
-              router.refresh();
             }}
             className="w-full btn-ghost text-sm text-slate-400"
           >
@@ -346,7 +300,7 @@ export default function SignUpPage() {
         You&apos;re all set!
       </h2>
       <p className="text-sm text-clinical-muted mb-6">
-        Your account is ready. You can now sign in with your voice or email.
+        Your account is ready.
       </p>
       <button
         onClick={() => {
