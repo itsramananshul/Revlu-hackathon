@@ -12,20 +12,13 @@ export default function RoleSelectionPage() {
   useEffect(() => {
     // 1. Check localStorage first (instant redirect if role already saved)
     const savedRole = localStorage.getItem("voxvitals-role");
-    if (savedRole === "patient") {
-      router.replace("/checkin");
-      return;
-    }
-    if (savedRole === "clinician") {
-      router.replace("/dashboard");
-      return;
-    }
-    if (savedRole === "super") {
-      router.replace("/super");
+    if (savedRole === "patient" || savedRole === "clinician" || savedRole === "super") {
+      const dest = savedRole === "patient" ? "/checkin" : savedRole === "super" ? "/super" : "/dashboard";
+      router.replace(dest);
       return;
     }
 
-    // 2. No saved role — try to fetch from app_users table
+    // 2. No saved role — try to fetch from user_metadata (persisted across sessions)
     const fetchRole = async () => {
       try {
         const supabase = createClient();
@@ -37,6 +30,16 @@ export default function RoleSelectionPage() {
           return;
         }
 
+        // Check user_metadata first (saved on role selection)
+        const metaRole = user.user_metadata?.voxvitals_role;
+        if (metaRole === "patient" || metaRole === "clinician" || metaRole === "super") {
+          localStorage.setItem("voxvitals-role", metaRole);
+          const dest = metaRole === "patient" ? "/checkin" : metaRole === "super" ? "/super" : "/dashboard";
+          router.replace(dest);
+          return;
+        }
+
+        // Fallback: check app_users table
         const { data: appUser } = await supabase
           .from("app_users")
           .select("role")
@@ -44,9 +47,9 @@ export default function RoleSelectionPage() {
           .maybeSingle();
 
         if (appUser?.role) {
-          const role = appUser.role === "super" ? "super" : appUser.role === "patient" ? "patient" : "clinician";
+          const role = appUser.role === "patient" ? "patient" : "clinician";
           localStorage.setItem("voxvitals-role", role);
-          const dest = role === "patient" ? "/checkin" : role === "super" ? "/super" : "/dashboard";
+          const dest = role === "patient" ? "/checkin" : "/dashboard";
           router.replace(dest);
           return;
         }
@@ -59,8 +62,15 @@ export default function RoleSelectionPage() {
     fetchRole();
   }, [router]);
 
-  const selectRole = (role: "patient" | "clinician" | "super") => {
+  const selectRole = async (role: "patient" | "clinician" | "super") => {
     localStorage.setItem("voxvitals-role", role);
+
+    // Persist to user_metadata so it survives across sessions
+    const supabase = createClient();
+    await supabase.auth.updateUser({
+      data: { voxvitals_role: role },
+    });
+
     const dest = role === "patient" ? "/checkin" : role === "super" ? "/super" : "/dashboard";
     router.push(dest);
   };
