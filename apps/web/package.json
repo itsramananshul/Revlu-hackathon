@@ -13,6 +13,7 @@
     "@supabase/supabase-js": "^2.100.1",
     "@trialpulse/config": "*",
     "@trialpulse/types": "*",
+    "@vercel/analytics": "^2.0.1",
     "lucide-react": "^0.469.0",
     "next": "^15.1.0",
     "react": "^19.0.0",
