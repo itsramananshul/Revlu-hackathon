@@ -42,17 +42,39 @@ const superNav = [
 export function Sidebar({ role }: { role: "patient" | "clinician" | "super" }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems = role === "patient" ? patientNav : role === "super" ? superNav : clinicianNav;
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUserEmail(user?.email ?? null);
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+
+      // For patient role, try to get their patient name
+      if (role === "patient") {
+        const { data: patients } = await supabase
+          .from("patients")
+          .select("name")
+          .eq("user_id", user.id)
+          .limit(1);
+        if (patients && patients.length > 0) {
+          setDisplayName(patients[0].name);
+          return;
+        }
+      }
+
+      // Fallback: derive name from email (e.g. "ar.dev@..." → "Ar Dev")
+      const local = (user.email ?? "").split("@")[0];
+      const name = local
+        .replace(/[._-]/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase())
+        .replace(/\d+/g, "")
+        .trim();
+      setDisplayName(name || user.email || "User");
     });
-  }, []);
+  }, [role]);
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -131,13 +153,13 @@ export function Sidebar({ role }: { role: "patient" | "clinician" | "super" }) {
 
       {/* User Footer */}
       <div className="p-3 border-t border-clinical-border">
-        {userEmail && (
+        {displayName && (
           <div className="flex items-center gap-2 px-3 py-2 mb-2">
             <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
               <User className="w-3.5 h-3.5 text-primary-600" />
             </div>
-            <span className="text-xs text-slate-600 truncate">
-              {userEmail}
+            <span className="text-sm font-medium text-slate-700 truncate">
+              {displayName}
             </span>
           </div>
         )}
