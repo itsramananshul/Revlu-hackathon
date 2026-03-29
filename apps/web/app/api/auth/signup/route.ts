@@ -56,18 +56,17 @@ export async function POST(request: Request) {
     );
   }
 
-  // Create auth user with email verification required
+  // Create auth user with auto-confirm (hackathon — no email service configured)
   let authUser;
   try {
     const { data, error } = await supabase.auth.admin.createUser({
       email: email.toLowerCase(),
       password,
-      email_confirm: false, // Require email verification
+      email_confirm: true,
       user_metadata: { full_name: name || undefined },
     });
 
     if (error) {
-      // If admin API not available, fall back to regular signup
       const { data: fallbackData, error: fallbackError } =
         await supabase.auth.signUp({
           email: email.toLowerCase(),
@@ -83,15 +82,6 @@ export async function POST(request: Request) {
       authUser = fallbackData.user;
     } else {
       authUser = data.user;
-
-      // Send verification email via magic link
-      const { error: linkError } = await supabase.auth.admin.generateLink({
-        type: "magiclink" as any,
-        email: email.toLowerCase(),
-      });
-      if (linkError) {
-        console.warn("[Signup] Could not send verification email:", linkError.message);
-      }
     }
   } catch {
     return NextResponse.json(
@@ -135,10 +125,24 @@ export async function POST(request: Request) {
     }
   }
 
-  // Do NOT auto-sign-in — user must verify email first
+  // Sign the user in to get a session
+  const { data: signInData, error: signInError } =
+    await supabase.auth.signInWithPassword({
+      email: email.toLowerCase(),
+      password,
+    });
+
+  if (signInError) {
+    return NextResponse.json({
+      success: true,
+      message: "Account created. Please sign in.",
+      data: { session: null },
+    });
+  }
+
   return NextResponse.json({
     success: true,
-    message: "Account created. Please check your email to verify.",
-    data: { session: null, requiresVerification: true },
+    message: "Account created",
+    data: { session: signInData.session },
   });
 }

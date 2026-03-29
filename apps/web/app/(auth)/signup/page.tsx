@@ -64,20 +64,17 @@ export default function SignUpPage() {
         return;
       }
 
-      setLoading(false);
-
-      // If email verification required, show verify screen
-      if (json.data?.requiresVerification) {
-        setStep("verify-email");
-      } else if (json.data?.session) {
-        // Legacy: if session returned, set it and go to voice setup
+      // Set session if returned
+      if (json.data?.session) {
         const supabase = createClient();
         await supabase.auth.setSession({
           access_token: json.data.session.access_token,
           refresh_token: json.data.session.refresh_token,
         });
-        setStep("voice-setup");
       }
+
+      setLoading(false);
+      setStep("voice-setup");
     } catch {
       setError("Failed to create account");
       setLoading(false);
