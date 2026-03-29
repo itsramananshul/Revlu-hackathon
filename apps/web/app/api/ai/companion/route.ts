@@ -70,17 +70,18 @@ export async function POST(request: Request) {
   const fullPrompt = COMPANION_SYSTEM_PROMPT + contextBlock;
 
   // Try Gemini first
-  const geminiKey = process.env.GEMINI_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY?.trim();
   if (geminiKey) {
     try {
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            systemInstruction: { parts: [{ text: fullPrompt }] },
             contents: [
-              { role: "user", parts: [{ text: fullPrompt + "\n\nPatient says: " + message }] },
+              { role: "user", parts: [{ text: message }] },
             ],
             generationConfig: { temperature: 0.4, maxOutputTokens: 512 },
           }),
@@ -95,14 +96,17 @@ export async function POST(request: Request) {
             data: { reply: text.trim(), provider: "gemini" },
           });
         }
+      } else {
+        const errBody = await res.text().catch(() => "");
+        console.error(`[Companion] Gemini failed (${res.status}):`, errBody.slice(0, 300));
       }
-    } catch {
-      // Fall through to Featherless
+    } catch (err) {
+      console.error("[Companion] Gemini error:", err);
     }
   }
 
   // Try Featherless fallback
-  const featherlessKey = process.env.FEATHERLESS_API_KEY;
+  const featherlessKey = process.env.FEATHERLESS_API_KEY?.trim();
   if (featherlessKey) {
     try {
       const res = await fetch(
@@ -133,9 +137,12 @@ export async function POST(request: Request) {
             data: { reply: text.trim(), provider: "featherless" },
           });
         }
+      } else {
+        const errBody = await res.text().catch(() => "");
+        console.error(`[Companion] Featherless failed (${res.status}):`, errBody.slice(0, 300));
       }
-    } catch {
-      // Fall through to fallback
+    } catch (err) {
+      console.error("[Companion] Featherless error:", err);
     }
   }
 
